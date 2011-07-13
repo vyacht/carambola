@@ -43,6 +43,10 @@ ramips_board_name() {
 	*"WZR-AGL300NH")
 		name="wzr-agl300nh"
 		;;
+	*"CARAMBOLA")
+		name="carambola"
+		;;
+
 	*)
 		name="generic"
 		;;

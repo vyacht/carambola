@@ -43,6 +43,7 @@ case "$FIRMWARE" in
 	rt-n15 | \
 	v22rw-2x2 | \
 	wcr150gn | \
+	carambola | \
 	whr-g300n)
 		rt2x00_eeprom_extract "factory" 0 272
 		;;
