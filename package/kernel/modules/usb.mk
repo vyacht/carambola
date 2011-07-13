@@ -126,9 +126,7 @@ $(eval $(call KernelPackage,musb-hdrc))
 
 define KernelPackage/nop-usb-xceiv
   TITLE:=Support for USB OTG NOP transceiver
-  KCONFIG:= \
-	CONFIG_NOP_USB_XCEIV
-  DEPENDS:=@TARGET_omap24xx
+  KCONFIG:= CONFIG_NOP_USB_XCEIV
   FILES:=$(LINUX_DIR)/drivers/usb/otg/nop-usb-xceiv.ko
   AUTOLOAD:=$(call AutoLoad,45,nop-usb-xceiv)
   $(call AddDepends/usb)
@@ -946,4 +944,30 @@ define KernelPackage/usb-phidget/description
 endef
 
 $(eval $(call KernelPackage,usb-phidget))
+
+
+define KernelPackage/dwc-otg
+  TITLE:=DWC OTG driver
+  DEPENDS:=@TARGET_ramips_rt305x
+  KCONFIG:= \
+	  CONFIG_USB_DWC_OTG \
+	  CONFIG_DWC_DEBUG=n \
+	  CONFIG_DWC_HOST_ONLY=y \
+	  CONFIG_DWC_OTG_MODE=n \
+	  CONFIG_DWC_DEVICE_ONLY=n \
+	  CONFIG_DWC_SLAVE=n \
+	  CONFIG_DWC_DMA_MODE=y \
+	  CONFIG_DWC_OTG_REG_LE=y \
+	  CONFIG_DWC_OTG_FIFO_LE=y
+  FILES:=$(LINUX_DIR)/drivers/usb/dwc_otg/dwc_otg.ko
+  AUTOLOAD:=$(call AutoLoad,54,dwc_otg)
+  $(call AddDepends/usb,+kmod-nop-usb-xceiv)
+endef
+
+define KernelPackage/dwc-otg/description
+  This driver provides USB Device Controller support for the
+  Synopsys DesignWare USB OTG Core used in various SoCs.
+endef
+
+$(eval $(call KernelPackage,dwc-otg))
 
