@@ -21,6 +21,7 @@ void rt305x_register_flash(unsigned int id, struct physmap_flash_data *pdata);
 void rt305x_register_ethernet(void);
 void rt305x_register_wifi(void);
 void rt305x_register_wdt(void);
+void rt305x_register_usb(void);
 
 #endif  /* __RT305X_DEVICES_H */
 

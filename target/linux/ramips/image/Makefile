@@ -157,6 +157,9 @@ define Image/Build/Profile/WCR150GN
 	$(call Image/Build/Template/WCR150GN,$(1),wcr150gn,WCR150GN)
 endef
 
+define Image/Build/Profile/CARAMBOLA
+	$(call Image/Build/Template/GENERIC_8M,$(1),carambola,CARAMBOLA)
+endef
 
 mtdlayout_f5d8235=mtdparts=physmap-flash.0:320k(u-boot)ro,1536k(kernel),6208k(rootfs),64k(nvram),64k(factory),7744k@0x50000(firmware)
 mtd_f5d8235_kernel_part_size=1572864
@@ -169,9 +172,8 @@ define Image/Build/Profile/F5D8235V2
 	$(call Image/Build/Template/F5D8235V2,$(1),f5d8235v2,F5D8235_V2)
 endef
 
-
 ifeq ($(CONFIG_RALINK_RT305X),y)
-define Image/Build/Profile/Default
+ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/DIR300B1,$(1))
 	$(call Image/Build/Profile/FONERA20N,$(1))
 	$(call Image/Build/Profile/V22RW2X2,$(1))
@@ -181,16 +183,25 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/F5D8235V2,$(1))
 	$(call Image/Build/Profile/HW5503G,$(1))
 	$(call Image/Build/Profile/MOFI35003GN,$(1))
-endef
+	$(call Image/Build/Profile/CARAMBOLA,$(1))
+ endef
 endif
 
 define Image/Build/squashfs
-	$(call prepare_generic_squashfs,$(KDIR)/root.squashfs)
+	$(call prepare_generic_squashfs,$(KDIR)/root.$(1))
+	dd if=$(KDIR)/root.$(1) of=$(BIN_DIR)/$(IMG_PREFIX)-$(1).img bs=128k conv=sync
+endef
+
+define Image/Build/jffs2-64k
+	dd if=$(KDIR)/root.$(1) of=$(BIN_DIR)/$(IMG_PREFIX)-$(1).img bs=64k conv=sync
+endef
+
+define Image/Build/jffs2-128k
+	dd if=$(KDIR)/root.$(1) of=$(BIN_DIR)/$(IMG_PREFIX)-$(1).img bs=128k conv=sync
 endef
 
 define Image/Build
-	$(call Image/Build/$(1))
-	dd if=$(KDIR)/root.$(1) of=$(BIN_DIR)/$(IMG_PREFIX)-root.$(1) bs=128k conv=sync
+	$(call Image/Build/$(1),$(1))
 	$(call Image/Build/Profile/$(PROFILE),$(1))
 endef
 

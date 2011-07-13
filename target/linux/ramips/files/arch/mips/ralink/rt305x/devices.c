@@ -14,6 +14,7 @@
 #include <linux/clk.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/physmap.h>
+#include <linux/etherdevice.h>
 #include <linux/rt2x00_platform.h>
 
 #include <asm/addrspace.h>
@@ -151,6 +152,21 @@ static struct platform_device rt305x_esw_device = {
 	}
 };
 
+#define EEPROM_FLASH_BASE 0x1F040000
+#define EEPROM_FLASH_SIZE 0x200
+
+void __init rt305x_read_ethernet_mac(unsigned char *addr)
+{
+	void __iomem *base_addr;
+
+	base_addr = ioremap(EEPROM_FLASH_BASE, EEPROM_FLASH_SIZE);
+	if (base_addr == NULL)
+		return;
+
+	memcpy(addr, base_addr + 0x28, 6);
+	iounmap(base_addr);
+}
+
 void __init rt305x_register_ethernet(void)
 {
 	struct clk *clk;
@@ -160,6 +176,10 @@ void __init rt305x_register_ethernet(void)
 		panic("unable to get SYS clock, err=%ld", PTR_ERR(clk));
 
 	ramips_eth_data.sys_freq = clk_get_rate(clk);
+
+	rt305x_read_ethernet_mac(ramips_eth_data.mac);
+	if (!is_valid_ether_addr(ramips_eth_data.mac))
+		random_ether_addr(ramips_eth_data.mac);
 
 	platform_device_register(&rt305x_esw_device);
 	platform_device_register(&rt305x_eth_device);
@@ -219,4 +239,30 @@ void __init rt305x_register_wdt(void)
 	rt305x_sysc_wr(t, SYSC_REG_SYSTEM_CONFIG);
 
 	platform_device_register(&rt305x_wdt_device);
+}
+
+static struct resource rt305x_usb_resources[] = {
+	{
+		.start	= RT305X_OTG_BASE,
+		.end	= RT305X_OTG_BASE + 0x3FFFF,
+		.flags	= IORESOURCE_MEM,
+	}, {
+		.start	= RT305X_INTC_IRQ_OTG,
+		.end	= RT305X_INTC_IRQ_OTG,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device rt305x_usb_device = {
+	.name			= "dwc_otg",
+	.resource		= rt305x_usb_resources,
+	.num_resources	= ARRAY_SIZE(rt305x_usb_resources),
+	.dev = {
+		.platform_data = NULL,
+	}
+};
+
+void __init rt305x_register_usb(void)
+{
+	platform_device_register(&rt305x_usb_device);
 }
