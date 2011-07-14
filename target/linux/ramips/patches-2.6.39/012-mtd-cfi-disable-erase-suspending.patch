@@ -1,0 +1,14 @@
+Index: linux-2.6.39.2/drivers/mtd/chips/cfi_cmdset_0002.c
+===================================================================
+--- linux-2.6.39.2.orig/drivers/mtd/chips/cfi_cmdset_0002.c
++++ linux-2.6.39.2/drivers/mtd/chips/cfi_cmdset_0002.c
+@@ -688,6 +688,9 @@ static int get_chip(struct map_info *map
+ 		return 0;
+ 
+ 	case FL_ERASING:
++		/* disables Erase-suspend, force sleeping until erase is done */
++		goto sleep;
++
+ 		if (!cfip || !(cfip->EraseSuspend & (0x1|0x2)) ||
+ 		    !(mode == FL_READY || mode == FL_POINT ||
+ 		    (mode == FL_WRITING && (cfip->EraseSuspend & 0x2))))
