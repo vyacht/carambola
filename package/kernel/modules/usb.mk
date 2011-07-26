@@ -946,28 +946,22 @@ endef
 $(eval $(call KernelPackage,usb-phidget))
 
 
-define KernelPackage/dwc-otg
+define KernelPackage/usb-dwc-otg
   TITLE:=DWC OTG driver
   DEPENDS:=@TARGET_ramips_rt305x
   KCONFIG:= \
-	  CONFIG_USB_DWC_OTG \
-	  CONFIG_DWC_DEBUG=n \
-	  CONFIG_DWC_HOST_ONLY=y \
-	  CONFIG_DWC_OTG_MODE=n \
-	  CONFIG_DWC_DEVICE_ONLY=n \
-	  CONFIG_DWC_SLAVE=n \
-	  CONFIG_DWC_DMA_MODE=y \
-	  CONFIG_DWC_OTG_REG_LE=y \
-	  CONFIG_DWC_OTG_FIFO_LE=y
+	CONFIG_DWC_OTG \
+	CONFIG_DWC_OTG_HOST_ONLY=y \
+	CONFIG_DWC_OTG_DEVICE_ONLY=n \
+	CONFIG_DWC_OTG_DEBUG=n
   FILES:=$(LINUX_DIR)/drivers/usb/dwc_otg/dwc_otg.ko
   AUTOLOAD:=$(call AutoLoad,54,dwc_otg)
-  $(call AddDepends/usb,+kmod-nop-usb-xceiv)
+  $(call AddDepends/usb)
 endef
 
-define KernelPackage/dwc-otg/description
+define KernelPackage/usb-dwc-otg/description
   This driver provides USB Device Controller support for the
   Synopsys DesignWare USB OTG Core used in various SoCs.
 endef
 
-$(eval $(call KernelPackage,dwc-otg))
-
+$(eval $(call KernelPackage,usb-dwc-otg))

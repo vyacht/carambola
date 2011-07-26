@@ -18,6 +18,8 @@
 #include <asm/mach-ralink/rt305x.h>
 #include <asm/mach-ralink/rt305x_regs.h>
 #include <asm/sizes.h>
+#include <linux/i2c.h>
+#include <linux/i2c-gpio.h>
 
 #include "devices.h"
 
@@ -58,12 +60,49 @@ static struct physmap_flash_data carambola_flash_data = {
 #endif
 };
 
+
+static int __init carambola_register_gpiodev(void)
+{
+       static struct resource res = {
+               .start = 0xFFFFFFFF,
+       };
+       struct platform_device *pdev;
+
+       pdev = platform_device_register_simple("GPIODEV", 0, &res, 1);
+       if (!pdev) {
+               printk(KERN_ERR "carambole: GPIODEV init failed\n");
+               return -ENODEV;
+       }
+
+       return 0;
+}
+
+static struct i2c_gpio_platform_data carambola_i2c_gpio_data = {
+	.sda_pin        = 1,
+	.scl_pin        = 2,
+};
+
+static struct platform_device carambola_i2c_gpio = {
+	.name           = "i2c-gpio",
+	.id             = 0,
+	.dev     = {
+		.platform_data  = &carambola_i2c_gpio_data,
+	},
+};
+
+static struct platform_device *carambola_devices[] __initdata = {
+        &carambola_i2c_gpio
+};
+
 static void __init carambola_init(void)
 {
+	rt305x_gpio_init((RT305X_GPIO_MODE_GPIO << RT305X_GPIO_MODE_UART0_SHIFT) |
+			 RT305X_GPIO_MODE_I2C);
+	carambola_register_gpiodev();
+	platform_add_devices(carambola_devices, ARRAY_SIZE(carambola_devices));
 	rt305x_register_flash(0, &carambola_flash_data);
 	rt305x_register_ethernet();
 	rt305x_register_wifi();
-	rt305x_register_usb();
 }
 
 MIPS_MACHINE(RAMIPS_MACH_CARAMBOLA, "CARAMBOLA", "CARAMBOLA",

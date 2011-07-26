@@ -1,21 +1,25 @@
 #
-# OTG infrastructure and transceiver drivers
+# Makefile for DWC_otg Highspeed USB controller driver
 #
-obj-$(CONFIG_USB_DWC_OTG)	+= dwc_otg.o
 
-dwc_otg-objs := dwc_otg_cil.o dwc_otg_cil_intr.o dwc_otg_param.o
-
-ifeq ($(CONFIG_4xx_SOC),y)
-dwc_otg-objs += dwc_otg_apmppc.o
-else
-dwc_otg-objs += dwc_otg_driver.o
+ifeq ($(CONFIG_DWC_OTG_DEBUG),y)
+EXTRA_CFLAGS   += -DDEBUG
 endif
 
-ifneq ($(CONFIG_DWC_DEVICE_ONLY),y)
-dwc_otg-objs += dwc_otg_hcd.o dwc_otg_hcd_intr.o \
-		dwc_otg_hcd_queue.o
+# Use one of the following flags to compile the software in host-only or
+# device-only mode.
+ifeq ($(CONFIG_DWC_OTG_HOST_ONLY),y)
+EXTRA_CFLAGS   += -DDWC_HOST_ONLY
+EXTRA_CFLAGS   += -DDWC_EN_ISOC
 endif
 
-ifneq ($(CONFIG_DWC_HOST_ONLY),y)
-dwc_otg-objs += dwc_otg_pcd.o dwc_otg_pcd_intr.o
+ifeq ($(CONFIG_DWC_OTG_DEVICE_ONLY),y)
+EXTRA_CFLAGS   += -DDWC_DEVICE_ONLY
 endif
+
+obj-$(CONFIG_DWC_OTG)	:= dwc_otg.o
+
+dwc_otg-objs	:= dwc_otg_driver.o dwc_otg_attr.o
+dwc_otg-objs	+= dwc_otg_cil.o dwc_otg_cil_intr.o
+dwc_otg-objs	+= dwc_otg_pcd.o dwc_otg_pcd_intr.o
+dwc_otg-objs	+= dwc_otg_hcd.o dwc_otg_hcd_intr.o dwc_otg_hcd_queue.o
