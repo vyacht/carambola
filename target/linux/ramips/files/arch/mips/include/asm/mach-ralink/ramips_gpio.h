@@ -36,11 +36,15 @@ struct ramips_gpio_chip {
 
 	spinlock_t lock;
 	void __iomem *regs_base;
+	u32 rising_edge_mask;
+	u32 falling_edge_mask;
 };
 
 struct ramips_gpio_data {
 	unsigned int num_chips;
 	struct ramips_gpio_chip *chips;
+	unsigned int irq_base;
+	unsigned int gpio_irq;
 };
 
 int ramips_gpio_init(struct ramips_gpio_data *data);

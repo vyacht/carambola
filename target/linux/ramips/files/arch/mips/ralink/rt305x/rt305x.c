@@ -112,6 +112,8 @@ static struct ramips_gpio_chip rt305x_gpio_chips[] = {
 static struct ramips_gpio_data rt305x_gpio_data = {
 	.chips = rt305x_gpio_chips,
 	.num_chips = ARRAY_SIZE(rt305x_gpio_chips),
+	.irq_base = RT305X_GPIO_IRQ_BASE,
+	.gpio_irq = RT305X_INTC_IRQ_PIO,
 };
 
 static void rt305x_gpio_reserve(int first, int last)

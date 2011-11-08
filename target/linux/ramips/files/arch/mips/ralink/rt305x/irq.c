@@ -44,7 +44,8 @@ static void rt305x_intc_irq_dispatch(void)
 	else if (pending & RT305X_INTC_INT_OTG)
 		do_IRQ(RT305X_INTC_IRQ_OTG);
 
-	/* TODO: handle PIO interrupts as well */
+	else if (pending & RT305X_INTC_INT_PIO)
+		do_IRQ(RT305X_INTC_IRQ_PIO);
 
 	else
 		spurious_interrupt();

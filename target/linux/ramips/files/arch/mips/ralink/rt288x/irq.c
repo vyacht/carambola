@@ -42,7 +42,8 @@ static void rt288x_intc_irq_dispatch(void)
 	else if (pending & RT2880_INTC_INT_UART1)
 		do_IRQ(RT2880_INTC_IRQ_UART1);
 
-	/* TODO: handle PIO interrupts as well */
+	else if (pending & RT2880_INTC_INT_PIO)
+		do_IRQ(RT2880_INTC_IRQ_PIO);
 
 	else
 		spurious_interrupt();

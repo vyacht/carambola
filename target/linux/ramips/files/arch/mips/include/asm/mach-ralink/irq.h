@@ -10,7 +10,7 @@
 #define __ASM_MACH_RT288X_IRQ_H
 
 #define MIPS_CPU_IRQ_BASE	0
-#define NR_IRQS			48
+#define NR_IRQS			91
 
 #include_next <irq.h>
 
