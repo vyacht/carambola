@@ -38,7 +38,6 @@
 #include <linux/usb.h>
 #include <linux/usb/hcd.h>
 
-struct lm_device;
 struct dwc_otg_device;
 
 #include "dwc_otg_cil.h"
@@ -407,8 +406,8 @@ static inline struct usb_hcd *dwc_otg_hcd_to_hcd(dwc_otg_hcd_t *dwc_otg_hcd)
 
 /** @name HCD Create/Destroy Functions */
 /** @{ */
-extern int dwc_otg_hcd_init(struct lm_device *lmdev);
-extern void dwc_otg_hcd_remove(struct lm_device *lmdev);
+extern int dwc_otg_hcd_init(struct device *dev);
+extern void dwc_otg_hcd_remove(struct device *dev);
 /** @} */
 
 /** @name Linux HC Driver API Functions */

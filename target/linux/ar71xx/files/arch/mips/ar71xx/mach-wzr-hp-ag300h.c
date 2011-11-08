@@ -15,6 +15,7 @@
 
 #include <asm/mips_machine.h>
 #include <asm/mach-ar71xx/ar71xx.h>
+#include <asm/mach-ar71xx/gpio.h>
 
 #include "machtype.h"
 #include "devices.h"
@@ -122,7 +123,7 @@ static void add_mtd_concat_notifier(void)
 
 static struct gpio_led wzrhpag300h_leds_gpio[] __initdata = {
 	{
-		.name		= "wzr-hp-ag300h:red:diag",
+		.name		= "buffalo:red:diag",
 		.gpio		= 1,
 		.active_low	= 1,
 	},
@@ -207,6 +208,8 @@ static void __init wzrhpag300h_setup(void)
 	ar71xx_add_device_eth(1);
 
 	ar71xx_add_device_usb();
+	gpio_request(2, "usb");
+	gpio_direction_output(2, 1);
 
 	ar71xx_add_device_leds_gpio(-1, ARRAY_SIZE(wzrhpag300h_leds_gpio),
 					wzrhpag300h_leds_gpio);

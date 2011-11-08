@@ -13,13 +13,14 @@ FEATURES:=squashfs jffs2 targz
 CFLAGS:=-Os -pipe -mips32r2 -mtune=mips32r2 -fno-caller-saves
 SUBTARGETS:=generic nand
 
-LINUX_VERSION:=2.6.39.2
+LINUX_VERSION:=2.6.39.4
 
 include $(INCLUDE_DIR)/target.mk
 
 DEFAULT_PACKAGES += \
 	kmod-leds-gpio kmod-input-core kmod-input-polldev \
-	kmod-input-gpio-keys-polled kmod-button-hotplug swconfig
+	kmod-input-gpio-keys-polled kmod-button-hotplug swconfig \
+	kmod-ath9k wpad-mini
 
 define Target/Description
 	Build firmware images for Atheros AR71xx/AR913x/AR934x based boards.

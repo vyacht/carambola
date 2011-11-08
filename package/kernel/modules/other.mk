@@ -24,8 +24,8 @@ define KernelPackage/bluetooth
 	CONFIG_BLUEZ_HCIUSB \
 	CONFIG_BLUEZ_HIDP \
 	CONFIG_BT \
-	CONFIG_BT_L2CAP \
-	CONFIG_BT_SCO \
+	CONFIG_BT_L2CAP=y \
+	CONFIG_BT_SCO=y \
 	CONFIG_BT_RFCOMM \
 	CONFIG_BT_BNEP \
 	CONFIG_BT_HCIBTUSB \
@@ -160,8 +160,13 @@ define KernelPackage/gpio-cs5535-new
   TITLE:=AMD CS5535/CS5536 GPIO driver with improved sysfs support
   DEPENDS:=@TARGET_x86 +kmod-cs5535-mfd @!(LINUX_2_6_30||LINUX_2_6_31||LINUX_2_6_32)
   KCONFIG:=CONFIG_GPIO_CS5535
+ifeq ($(strip $(call CompareKernelPatchVer,$(KERNEL_PATCHVER),ge,3.1.0)),1)
+  FILES:=$(LINUX_DIR)/drivers/gpio/gpio-cs5535.ko
+  AUTOLOAD:=$(call AutoLoad,50,gpio-cs5535)
+else
   FILES:=$(LINUX_DIR)/drivers/gpio/cs5535-gpio.ko
   AUTOLOAD:=$(call AutoLoad,50,cs5535-gpio)
+endif
 endef
 
 define KernelPackage/gpio-cs5535-new/description
@@ -252,12 +257,10 @@ $(eval $(call KernelPackage,gpio-nxp-74hc164))
 define KernelPackage/hid
   SUBMENU:=$(OTHER_MENU)
   TITLE:=HID Devices
-  DEPENDS:=+kmod-input-evdev
   KCONFIG:=CONFIG_HID
   FILES:=$(LINUX_DIR)/drivers/hid/hid.ko
   AUTOLOAD:=$(call AutoLoad,61,hid)
-  $(call SetDepends/hid)
-  $(call AddDepends/input)
+  $(call AddDepends/input,+kmod-input-evdev)
 endef
 
 define KernelPackage/hid/description
@@ -271,7 +274,6 @@ define KernelPackage/input-core
   SUBMENU:=$(OTHER_MENU)
   TITLE:=Input device core
   KCONFIG:=CONFIG_INPUT
-  $(call SetDepends/input)
   FILES:=$(LINUX_DIR)/drivers/input/input-core.ko
   AUTOLOAD:=$(call AutoLoad,19,input-core)
 endef
@@ -548,6 +550,29 @@ endef
 $(eval $(call KernelPackage,ssb))
 
 
+define KernelPackage/bcma
+  SUBMENU:=$(OTHER_MENU)
+  TITLE:=BCMA support
+  DEPENDS:=@PCI_SUPPORT @!TARGET_brcm47xx
+  KCONFIG:=\
+	CONFIG_BCMA \
+	CONFIG_BCMA_POSSIBLE=y \
+	CONFIG_BCMA_BLOCKIO=y \
+	CONFIG_BCMA_HOST_PCI_POSSIBLE=y \
+	CONFIG_BCMA_HOST_PCI=y \
+	CONFIG_BCMA_DRIVER_PCI_HOSTMODE=n \
+	CONFIG_BCMA_DEBUG=n
+  FILES:=$(LINUX_DIR)/drivers/bcma/bcma.ko
+  AUTOLOAD:=$(call AutoLoad,29,bcma)
+endef
+
+define KernelPackage/bcma/description
+   Bus driver for Broadcom specific Advanced Microcontroller Bus Architecture.
+endef
+
+$(eval $(call KernelPackage,bcma))
+
+
 define KernelPackage/wdt-geode
   SUBMENU:=$(OTHER_MENU)
   TITLE:=Geode/LX Watchdog timer
@@ -709,7 +734,7 @@ $(eval $(call KernelPackage,pwm-gpio))
 
 define KernelPackage/rtc-core
   SUBMENU:=$(OTHER_MENU)
-  DEPENDS:=@(!LINUX_3_0||BROKEN)
+  DEPENDS:=@LINUX_2_6_30||LINUX_2_6_31||LINUX_2_6_32||LINUX_2_6_36||LINUX_2_6_37||LINUX_2_6_38||LINUX_2_6_39||BROKEN
   TITLE:=Real Time Clock class support
   KCONFIG:=CONFIG_RTC_CLASS
   FILES:=$(LINUX_DIR)/drivers/rtc/rtc-core.ko

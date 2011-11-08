@@ -127,6 +127,7 @@ static void __init hw550_3g_init(void)
 	rt305x_gpio_init(HW550_3G_GPIO_MODE);
 
 	rt305x_register_flash(0, &hw550_3g_flash_data);
+       rt305x_esw_data.vlan_config = RT305X_ESW_VLAN_CONFIG_WLLLL;
 	rt305x_register_ethernet();
 	ramips_register_gpio_leds(-1, ARRAY_SIZE(hw550_3g_leds_gpio),
 				  hw550_3g_leds_gpio);
@@ -135,6 +136,7 @@ static void __init hw550_3g_init(void)
 				     hw550_3g_gpio_buttons);
 	rt305x_register_wifi();
 	rt305x_register_wdt();
+	rt305x_register_usb();
 }
 
 MIPS_MACHINE(RAMIPS_MACH_HW550_3G, "HW550-3G", "Aztech HW550-3G",

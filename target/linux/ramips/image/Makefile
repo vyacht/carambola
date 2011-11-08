@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2008-2010 OpenWrt.org
+# Copyright (C) 2008-2011 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -89,6 +89,30 @@ define BuildFirmware/Buffalo
 	fi; fi
 endef
 
+define BuildFirmware/NW718
+	$(call PatchKernelLzma,$(2),$(3) $($(4)))
+	mkimage -A mips -O linux -T kernel -C lzma $(call kernel_entry) \
+		-n "ARA1B4NCRNW718;1" \
+		-d "$(KDIR)/vmlinux-$(2).bin.lzma" \
+		"$(KDIR)/vmlinux-$(2).uImage"
+	if [ `stat -c%s "$(KDIR)/vmlinux-$(2).uImage"` -gt $(5) ]; then \
+		echo "Warning: $(KDIR)/vmlinux-$(2).uImage is too big"; \
+	else if [ `stat -c%s $(KDIR)/root.$(1)` -gt $(6) ]; then \
+		echo "Warning: $(KDIR)/root.$(1) is too big"; \
+	else \
+		( \
+			dd if=$(KDIR)/vmlinux-$(2).uImage bs=$(5) conv=sync; \
+			dd if=$(KDIR)/root.$(1) bs=64k conv=sync; \
+		) > $(call imgname,$(1),$(2))-factory.bin; \
+	fi; fi
+endef
+
+define BuildFirmware/Edimax
+	mkedimaximg -i $(call imgname,$(1),$(2))-sysupgrade.bin \
+		-o $(call imgname,$(1),$(2))-factory.bin \
+		-s $(3) -m $(4) -f $(5) -S $(6)
+endef
+
 mtdlayout_4M=mtdparts=physmap-flash.0:192k(u-boot)ro,64k(u-boot-env)ro,64k(factory)ro,832k(kernel),2944k(rootfs),3776k@0x50000(firmware)
 define Image/Build/Template/GENERIC_4M
 	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),mtdlayout_4M,851968,3014656)
@@ -104,20 +128,52 @@ mtd_dir300b1_kernel_part_size=851968
 mtd_dir300b1_rootfs_part_size=3014656
 define Image/Build/Template/DIR300B1
 	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),mtdlayout_dir300b1,$(mtd_dir300b1_kernel_part_size),$(mtd_dir300b1_rootfs_part_size))
-	mkwrgimg -s wrgn23_dlwbr_dir300b -d /dev/mtdblock/2 \
+	mkwrgimg -s $(4) -d /dev/mtdblock/2 \
 		-i $(call imgname,$(1),$(2))-sysupgrade.bin \
 		-o $(call imgname,$(1),$(2))-factory.bin
 endef
 
+mtdlayout_nw718=mtdparts=spi0.0:192k(u-boot)ro,128k(config)ro,64k(factory)ro,832k(kernel),2880k(rootfs),3712k@0x60000(firmware)
+define Image/Build/Template/NW718
+	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),mtdlayout_nw718,851968,2949120)
+	$(call BuildFirmware/NW718,$(1),$(2),board=$(3),mtdlayout_nw718,851968,2949120)
+endef
+
 define Image/Build/Profile/DIR300B1
-	$(call Image/Build/Template/DIR300B1,$(1),dir-300-b1,DIR-300-revB)
+	$(call Image/Build/Template/DIR300B1,$(1),dir-300-b1,DIR-300-B1,wrgn23_dlwbr_dir300b)
+	$(call Image/Build/Template/DIR300B1,$(1),dir-600-b1,DIR-600-B1,wrgn23_dlwbr_dir600b)
+	$(call Image/Build/Template/DIR300B1,$(1),dir-600-b2,DIR-600-B2,wrgn23_dlwbr_dir600b)
+endef
+
+mtdlayout_rtg32b1=mtdparts=spi0.0:192k(u-boot)ro,64k(devdata)ro,64k(devconf)ro,832k(kernel),2944k(rootfs),3776k@0x50000(firmware)
+mtd_rtg32b1_kernel_part_size=851968
+mtd_rtg32b1_rootfs_part_size=3014656
+define Image/Build/Template/RTG32B1
+	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),mtdlayout_rtg32b1,$(mtd_rtg32b1_kernel_part_size),$(mtd_rtg32b1_rootfs_part_size))
+endef
+
+define Image/Build/Profile/RTG32B1
+	$(call Image/Build/Template/RTG32B1,$(1),rt-g32-b1,RT-G32-B1)
 endef
 
 define Image/Build/Profile/FONERA20N
 	$(call Image/Build/Template/GENERIC_8M,$(1),fonera20n,FONERA20N)
+	$(call BuildFirmware/Edimax,$(1),fonera20n,RSDK,NL1T,0x50000,0xc0000)
 endef
 
-define Image/Build/Template/PWH2004
+define Image/Build/Profile/BC2
+	$(call Image/Build/Template/GENERIC_8M,$(1),bc2,BC2)
+endef
+
+define Image/Build/Profile/NBG419N
+	$(call Image/Build/Template/GENERIC_4M,$(1),nbg-419n,NBG-419N)
+endef
+
+define Image/Build/Profile/NW718
+	$(call Image/Build/Template/NW718,$(1),nw718,NW718)
+endef
+
+define Image/Build/Profile/PWH2004
 	$(call Image/Build/Template/GENERIC_8M,$(1),pwh2004,PWH2004)
 endef
 
@@ -161,6 +217,17 @@ define Image/Build/Profile/CARAMBOLA
 	$(call Image/Build/Template/GENERIC_8M,$(1),carambola,CARAMBOLA)
 endef
 
+mtdlayout_argus_atp52b=mtdparts=physmap-flash.0:192k(bootloader)ro,64k(config),64k(factory),1152k(kernel),6656k(rootfs),7808k@0x50000(firmware)
+mtd_argus_atp52b_kernel_part_size=1179648
+mtd_argus_atp52b_rootfs_part_size=6815744
+define Image/Build/Template/ARGUS_ATP52B
+	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),mtdlayout_argus_atp52b,$(mtd_argus_atp52b_kernel_part_size),$(mtd_argus_atp52b_rootfs_part_size))
+endef
+
+define Image/Build/Profile/ARGUS_ATP52B
+	$(call Image/Build/Template/ARGUS_ATP52B,$(1),argus_atp52b,ARGUS_ATP52B)
+endef
+
 mtdlayout_f5d8235=mtdparts=physmap-flash.0:320k(u-boot)ro,1536k(kernel),6208k(rootfs),64k(nvram),64k(factory),7744k@0x50000(firmware)
 mtd_f5d8235_kernel_part_size=1572864
 mtd_f5d8235_rootfs_part_size=6356992
@@ -172,19 +239,34 @@ define Image/Build/Profile/F5D8235V2
 	$(call Image/Build/Template/F5D8235V2,$(1),f5d8235v2,F5D8235_V2)
 endef
 
+
+mtdlayout_wr5123gn=mtdparts=physmap-flash.0:192k(u-boot)ro,64k(u-boot-env)ro,64k(factory)ro,832k(kernel),2944k(rootfs),3776k@0x50000(firmware)
+mtdlayout_wr5123gn8m=mtdparts=physmap-flash.0:192k(u-boot)ro,64k(u-boot-env)ro,64k(factory)ro,832k(kernel),7040k(rootfs),7872k@0x50000(firmware)
+define Image/Build/Profile/WR5123GN
+	$(call BuildFirmware/Generic,$(1),wr512-3gn-4M,board="WR512-3GN",mtdlayout_wr5123gn,851968,3014656)
+	$(call BuildFirmware/Generic,$(1),wr512-3gn-8M,board="WR512-3GN",mtdlayout_wr5123gn8m,851968,7208960)
+endef
+
+
 ifeq ($(CONFIG_RALINK_RT305X),y)
- define Image/Build/Profile/Default
+define Image/Build/Profile/Default
+	$(call Image/Build/Profile/ARGUS_ATP52B,$(1))
+	$(call Image/Build/Profile/BC2,$(1))
 	$(call Image/Build/Profile/DIR300B1,$(1))
+	$(call Image/Build/Profile/RTG32B1,$(1))
 	$(call Image/Build/Profile/FONERA20N,$(1))
 	$(call Image/Build/Profile/V22RW2X2,$(1))
+	$(call Image/Build/Profile/NBG419N,$(1))
+	$(call Image/Build/Profile/NW718,$(1))
 	$(call Image/Build/Profile/PWH2004,$(1))
 	$(call Image/Build/Profile/WHRG300N,$(1))
 	$(call Image/Build/Profile/WCR150GN,$(1))
 	$(call Image/Build/Profile/F5D8235V2,$(1))
 	$(call Image/Build/Profile/HW5503G,$(1))
 	$(call Image/Build/Profile/MOFI35003GN,$(1))
+	$(call Image/Build/Profile/WR5123GN,$(1))
 	$(call Image/Build/Profile/CARAMBOLA,$(1))
- endef
+endef
 endif
 
 define Image/Build/squashfs

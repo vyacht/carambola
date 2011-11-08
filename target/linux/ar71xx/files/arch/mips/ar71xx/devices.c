@@ -265,9 +265,11 @@ static void ar724x_set_pll_ge1(int speed)
 static void ar7242_set_pll_ge0(int speed)
 {
 	u32 val = ar71xx_get_eth_pll(0, speed);
+	void __iomem *base;
 
-	ar71xx_set_pll(AR71XX_PLL_REG_SEC_CONFIG, AR7242_PLL_REG_ETH0_INT_CLOCK,
-		       val, AR71XX_ETH0_PLL_SHIFT);
+	base = ioremap_nocache(AR71XX_PLL_BASE, AR71XX_PLL_SIZE);
+	__raw_writel(val, base + AR7242_PLL_REG_ETH0_INT_CLOCK);
+	iounmap(base);
 }
 
 static void ar91xx_set_pll_ge0(int speed)
@@ -410,7 +412,7 @@ struct platform_device ar71xx_eth1_device = {
 #define AR724X_PLL_VAL_100	0x00001099
 #define AR724X_PLL_VAL_10	0x00991099
 
-#define AR7242_PLL_VAL_1000	0x1c000000
+#define AR7242_PLL_VAL_1000	0x16000000
 #define AR7242_PLL_VAL_100	0x00000101
 #define AR7242_PLL_VAL_10	0x00001616
 
@@ -558,8 +560,10 @@ void __init ar71xx_add_device_eth(unsigned int id)
 		break;
 
 	case AR71XX_SOC_AR7242:
-		ar71xx_eth0_data.reset_bit |= AR724X_RESET_GE0_MDIO;
-		ar71xx_eth1_data.reset_bit |= AR724X_RESET_GE1_MDIO;
+		ar71xx_eth0_data.reset_bit |= AR724X_RESET_GE0_MDIO |
+					      RESET_MODULE_GE0_PHY;
+		ar71xx_eth1_data.reset_bit |= AR724X_RESET_GE1_MDIO |
+					      RESET_MODULE_GE1_PHY;
 		pdata->ddr_flush = id ? ar724x_ddr_flush_ge1
 				      : ar724x_ddr_flush_ge0;
 		pdata->set_pll =  id ? ar724x_set_pll_ge1
@@ -580,11 +584,15 @@ void __init ar71xx_add_device_eth(unsigned int id)
 		ar71xx_eth1_data.reset_bit |= AR724X_RESET_GE1_MDIO;
 		/* fall through */
 	case AR71XX_SOC_AR7240:
+		ar71xx_eth0_data.reset_bit |= RESET_MODULE_GE0_PHY;
+		ar71xx_eth1_data.reset_bit |= RESET_MODULE_GE1_PHY;
 		pdata->ddr_flush = id ? ar724x_ddr_flush_ge1
 				      : ar724x_ddr_flush_ge0;
 		pdata->set_pll =  id ? ar724x_set_pll_ge1
 				     : ar724x_set_pll_ge0;
 		pdata->is_ar724x = 1;
+		if (ar71xx_soc == AR71XX_SOC_AR7240)
+			pdata->is_ar7240 = 1;
 
 		if (!pdata->fifo_cfg1)
 			pdata->fifo_cfg1 = 0x0010ffff;

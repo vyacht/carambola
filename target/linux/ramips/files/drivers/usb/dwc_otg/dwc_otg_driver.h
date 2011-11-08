@@ -51,7 +51,7 @@ typedef struct dwc_otg_device {
 	/** Base address returned from ioremap() */
 	void *base;
 
-	struct lm_device *lmdev;
+	struct device *parent;
 
 	/** Pointer to the core interface structure. */
 	dwc_otg_core_if_t *core_if;
@@ -68,6 +68,16 @@ typedef struct dwc_otg_device {
 	/** Flag to indicate whether the common IRQ handler is installed. */
 	uint8_t common_irq_installed;
 
+	/* Interrupt request number. */
+	unsigned int irq;
+
+	/* Physical address of Control and Status registers, used by
+	 * release_mem_region().
+	 */
+	resource_size_t phys_addr;
+
+	/* Length of memory region, used by release_mem_region(). */
+	unsigned long base_len;
 } dwc_otg_device_t;
 
 #endif

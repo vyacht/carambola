@@ -1095,3 +1095,4 @@ extern void dwc_otg_cil_register_hcd_callbacks( dwc_otg_core_if_t *_core_if,
 						void *_p);
 
 #endif
+

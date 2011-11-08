@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2008 OpenWrt.org
+# Copyright (C) 2006-2011 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -12,7 +12,7 @@ define KernelPackage/sis190
   TITLE:=SiS 190 Fast/Gigabit Ethernet support
   DEPENDS:=@TARGET_x86
   KCONFIG:=CONFIG_SIS190
-  FILES:=$(LINUX_DIR)/drivers/net/sis190.$(LINUX_KMOD_SUFFIX)
+  FILES:=$(LINUX_DIR)/drivers/net/sis190.ko
   AUTOLOAD:=$(call AutoLoad,50,sis190)
 endef
  
@@ -22,8 +22,9 @@ define KernelPackage/skge
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=SysKonnect Yukon support
   DEPENDS:=@TARGET_x86
-  KCONFIG:=CONFIG_SKGE
-  FILES:=$(LINUX_DIR)/drivers/net/skge.$(LINUX_KMOD_SUFFIX)
+  KCONFIG:=CONFIG_SKGE \
+    CONFIG_SKGE_DEBUG=n
+  FILES:=$(LINUX_DIR)/drivers/net/skge.ko
   AUTOLOAD:=$(call AutoLoad,50,skge)
 endef
 
@@ -34,7 +35,7 @@ define KernelPackage/atl2
   TITLE:=Atheros L2 Fast Ethernet support
   DEPENDS:=@PCI_SUPPORT
   KCONFIG:=CONFIG_ATL2
-  FILES:=$(LINUX_DIR)/drivers/net/atlx/atl2.$(LINUX_KMOD_SUFFIX)
+  FILES:=$(LINUX_DIR)/drivers/net/atlx/atl2.ko
   AUTOLOAD:=$(call AutoLoad,50,atl2)
 endef
 
@@ -45,7 +46,7 @@ define KernelPackage/atl1
   TITLE:=Atheros L1 Gigabit Ethernet support
   DEPENDS:=@PCI_SUPPORT
   KCONFIG:=CONFIG_ATL1
-  FILES:=$(LINUX_DIR)/drivers/net/atlx/atl1.$(LINUX_KMOD_SUFFIX)
+  FILES:=$(LINUX_DIR)/drivers/net/atlx/atl1.ko
   AUTOLOAD:=$(call AutoLoad,50,atl1)
 endef
 
@@ -56,7 +57,7 @@ define KernelPackage/atl1c
   TITLE:=Atheros L1C
   DEPENDS:=@PCI_SUPPORT
   KCONFIG:=CONFIG_ATL1C
-  FILES:=$(LINUX_DIR)/drivers/net/atl1c/atl1c.$(LINUX_KMOD_SUFFIX)
+  FILES:=$(LINUX_DIR)/drivers/net/atl1c/atl1c.ko
   AUTOLOAD:=$(call AutoLoad,50,atl1c)
 endef
 
@@ -67,7 +68,7 @@ define KernelPackage/atl1e
   TITLE:=Atheros L1E
   DEPENDS:=@PCI_SUPPORT
   KCONFIG:=CONFIG_ATL1E
-  FILES:=$(LINUX_DIR)/drivers/net/atl1e/atl1e.$(LINUX_KMOD_SUFFIX)
+  FILES:=$(LINUX_DIR)/drivers/net/atl1e/atl1e.ko
   AUTOLOAD:=$(call AutoLoad,50,atl1e)
 endef
 
@@ -105,7 +106,7 @@ $(eval $(call KernelPackage,swconfig))
 define KernelPackage/mvswitch
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Marvell 88E6060 switch support
-  DEPENDS:=+kmod-swconfig
+  DEPENDS:=+kmod-swconfig @!LINUX_3_1||BROKEN
   KCONFIG:=CONFIG_MVSWITCH_PHY
   FILES:=$(LINUX_DIR)/drivers/net/phy/mvswitch.ko
   AUTOLOAD:=$(call AutoLoad,41,mvswitch)
@@ -185,7 +186,6 @@ $(eval $(call KernelPackage,sis900))
 define KernelPackage/sky2
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=SysKonnect Yukon2 support
-  DEPENDS:=@TARGET_x86
   KCONFIG:=CONFIG_SKY2
   FILES:=$(LINUX_DIR)/drivers/net/sky2.ko
   AUTOLOAD:=$(call AutoLoad,50,sky2)
@@ -224,7 +224,7 @@ $(eval $(call KernelPackage,via-rhine))
 define KernelPackage/via-velocity
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=VIA Velocity Gigabit Ethernet Adapter kernel support
-  DEPENDS:=@TARGET_ixp4xx||TARGET_mpc83xx||TARGET_x86 +kmod-crc-ccitt
+  DEPENDS:=@TARGET_ixp4xx||TARGET_mpc83xx||TARGET_x86 +kmod-lib-crc-ccitt
   KCONFIG:=CONFIG_VIA_VELOCITY
   FILES:=$(LINUX_DIR)/drivers/net/via-velocity.ko
   AUTOLOAD:=$(call AutoLoad,50,via-velocity)
@@ -501,7 +501,7 @@ $(eval $(call KernelPackage,hfcmulti))
 define KernelPackage/gigaset
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Siemens Gigaset support for isdn4linux
-  DEPENDS:=@USB_SUPPORT +kmod-isdn4linux +kmod-crc-ccitt +kmod-usb-core
+  DEPENDS:=@USB_SUPPORT +kmod-isdn4linux +kmod-lib-crc-ccitt +kmod-usb-core
   URL:=http://gigaset307x.sourceforge.net/
   KCONFIG:= \
     CONFIG_ISDN_DRV_GIGASET \

@@ -61,6 +61,9 @@ Package/uboot-lantiq-arv4520PW_brnboot=$(call Package/uboot-lantiq-template,arv4
 Package/uboot-lantiq-arv4525PW_flash=$(call Package/uboot-lantiq-template,arv4525PW_flash,NOR)
 Package/uboot-lantiq-arv4525PW_ramboot=$(call Package/uboot-lantiq-template,arv4525PW_ramboot,RAM)
 Package/uboot-lantiq-arv4525PW_brnboot=$(call Package/uboot-lantiq-template,arv4525PW_brnboot,BRN)
+Package/uboot-lantiq-arv7525PW_flash=$(call Package/uboot-lantiq-template,arv7525PW_flash,NOR)
+Package/uboot-lantiq-arv7525PW_ramboot=$(call Package/uboot-lantiq-template,arv7525PW_ramboot,RAM)
+Package/uboot-lantiq-arv7525PW_brnboot=$(call Package/uboot-lantiq-template,arv7525PW_brnboot,BRN)
 Package/uboot-lantiq-arv452CPW_flash=$(call Package/uboot-lantiq-template,arv452CPW_flash,NOR)
 Package/uboot-lantiq-arv452CPW_ramboot=$(call Package/uboot-lantiq-template,arv452CPW_ramboot,RAM)
 Package/uboot-lantiq-arv452CPW_brnboot=$(call Package/uboot-lantiq-template,arv452CPW_brnboot,BRN)
@@ -75,6 +78,7 @@ DDR_CONFIG_arv3527P_ramboot:=arcadyan_psc166_32
 DDR_CONFIG_arv4518PW_ramboot:=arcadyan_psc166_64
 DDR_CONFIG_arv4520PW_ramboot:=arcadyan_psc166_32
 DDR_CONFIG_arv4525PW_ramboot:=arcadyan_psc166_32
+DDR_CONFIG_arv7525PW_ramboot:=arcadyan_psc166_32
 DDR_CONFIG_arv452CPW_ramboot:=arcadyan_psc166_32
 DDR_CONFIG_arv752DPW_ramboot:=arcadyan_psc166_64
 DDR_CONFIG_arv752DPW22_ramboot:=arcadyan_psc166_64
@@ -115,15 +119,15 @@ endef
 
 define Package/uboot-lantiq-$(BUILD_VARIANT)/install
 	mkdir -p $(1)
-ifneq ($(findstring ramboot,$(BUILD_VARIANT)),)
-	dd \
-		if=$(PKG_BUILD_DIR)/$(BUILD_VARIANT)/u-boot.bin \
-		of=$(1)/u-boot.bin \
-		bs=64k conv=sync
-else
+ifneq ($(findstring flash,$(BUILD_VARIANT)),)
 	dd \
 		if=$(PKG_BUILD_DIR)/$(BUILD_VARIANT)/u-boot-bootstrap.bin \
 		of=$(1)/u-boot-bootstrap.bin \
+		bs=64k conv=sync
+else
+	dd \
+		if=$(PKG_BUILD_DIR)/$(BUILD_VARIANT)/u-boot.bin \
+		of=$(1)/u-boot.bin \
 		bs=64k conv=sync
 endif
 ifneq ($(findstring ramboot,$(BUILD_VARIANT)),)
@@ -153,6 +157,9 @@ $(eval $(call BuildPackage,uboot-lantiq-arv4520PW_ramboot))
 $(eval $(call BuildPackage,uboot-lantiq-arv4525PW_flash))
 $(eval $(call BuildPackage,uboot-lantiq-arv4525PW_brnboot))
 $(eval $(call BuildPackage,uboot-lantiq-arv4525PW_ramboot))
+$(eval $(call BuildPackage,uboot-lantiq-arv7525PW_flash))
+$(eval $(call BuildPackage,uboot-lantiq-arv7525PW_brnboot))
+$(eval $(call BuildPackage,uboot-lantiq-arv7525PW_ramboot))
 $(eval $(call BuildPackage,uboot-lantiq-arv452CPW_flash))
 $(eval $(call BuildPackage,uboot-lantiq-arv452CPW_brnboot))
 $(eval $(call BuildPackage,uboot-lantiq-arv452CPW_ramboot))

@@ -50,13 +50,11 @@
 #include <linux/dma-mapping.h>
 #include <linux/version.h>
 
-#include <asm/mach-ralink/lm.h>
-
 #include "dwc_otg_driver.h"
 #include "dwc_otg_hcd.h"
 #include "dwc_otg_regs.h"
 
-static const char dwc_otg_hcd_name[] = "dwc_otg_hcd";
+static const char dwc_otg_hcd_name[] = "dwc_otg";
 
 static const struct hc_driver dwc_otg_hc_driver = {
 
@@ -410,11 +408,11 @@ static struct tasklet_struct reset_tasklet = {
  * USB bus with the core and calls the hc_driver->start() function. It returns
  * a negative error on failure.
  */
-int dwc_otg_hcd_init(struct lm_device *lmdev)
+int dwc_otg_hcd_init(struct device *dev)
 {
+	dwc_otg_device_t *otg_dev = dev_get_drvdata(dev);
 	struct usb_hcd *hcd = NULL;
 	dwc_otg_hcd_t *dwc_otg_hcd = NULL;
-	dwc_otg_device_t *otg_dev = lm_get_drvdata(lmdev);
 
 	int 		num_channels;
 	int 		i;
@@ -430,8 +428,8 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 	/* Set device flags indicating whether the HCD supports DMA. */
 	if (otg_dev->core_if->dma_enable) {
 		DWC_PRINT("Using DMA mode\n");
-		lmdev->dev.dma_mask = (void *)~0;
-		lmdev->dev.coherent_dma_mask = ~0;
+		dev->dma_mask = (void *)~0;
+		dev->coherent_dma_mask = ~0;
 
 		if (otg_dev->core_if->dma_desc_enable) {
 			DWC_PRINT("Device using Descriptor DMA mode\n");
@@ -440,21 +438,24 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 		}
 	} else {
 		DWC_PRINT("Using Slave mode\n");
-		lmdev->dev.dma_mask = (void *)0;
-		lmdev->dev.coherent_dma_mask = 0;
+		dev->dma_mask = (void *)0;
+		dev->coherent_dma_mask = 0;
 	}
 #endif
 	/*
 	 * Allocate memory for the base HCD plus the DWC OTG HCD.
 	 * Initialize the base HCD.
 	 */
-	hcd = usb_create_hcd(&dwc_otg_hc_driver, &lmdev->dev, dev_name(&lmdev->dev));
+	hcd = usb_create_hcd(&dwc_otg_hc_driver, dev, dev_name(dev));
 	if (!hcd) {
 		retval = -ENOMEM;
 		goto error1;
 	}
 
+	dev_set_drvdata(dev, otg_dev);
 	hcd->regs = otg_dev->base;
+	hcd->rsrc_start = otg_dev->phys_addr;
+	hcd->rsrc_len = otg_dev->base_len;
 	hcd->self.otg_port = 1;
 	hcd->has_tt = 1;
 
@@ -514,8 +515,8 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 	/* Set device flags indicating whether the HCD supports DMA. */
 	if (otg_dev->core_if->dma_enable) {
 		DWC_PRINT("Using DMA mode\n");
-		lmdev->dev.dma_mask = (void *)~0;
-		lmdev->dev.coherent_dma_mask = ~0;
+		dev->dma_mask = (void *)~0;
+		dev->coherent_dma_mask = ~0;
 
 		if (otg_dev->core_if->dma_desc_enable){
 			DWC_PRINT("Device using Descriptor DMA mode\n");
@@ -524,8 +525,8 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 		}
 	} else {
 		DWC_PRINT("Using Slave mode\n");
-		lmdev->dev.dma_mask = (void *)0;
-		lmdev->dev.coherent_dma_mask = 0;
+		dev->dma_mask = (void *)0;
+		dev->dev.coherent_dma_mask = 0;
 	}
 #endif
 	/*
@@ -533,7 +534,7 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 	 * allocates the DMA buffer pool, registers the USB bus, requests the
 	 * IRQ line, and calls dwc_otg_hcd_start method.
 	 */
-	retval = usb_add_hcd(hcd, lmdev->irq, IRQF_SHARED);
+	retval = usb_add_hcd(hcd, otg_dev->irq, IRQF_SHARED);
 	if (retval < 0) {
 		goto error2;
 	}
@@ -546,7 +547,7 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 	 */
 	if (otg_dev->core_if->dma_enable) {
 		dwc_otg_hcd->status_buf =
-			dma_alloc_coherent(&lmdev->dev,
+			dma_alloc_coherent(dev,
 					   DWC_OTG_HCD_STATUS_BUF_SIZE,
 					   &dwc_otg_hcd->status_buf_dma,
 					   GFP_KERNEL | GFP_DMA);
@@ -563,7 +564,7 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 	dwc_otg_hcd->otg_dev = otg_dev;
 
 	DWC_DEBUGPL(DBG_HCD, "DWC OTG HCD Initialized HCD, bus=%s, usbbus=%d\n",
-		    dev_name(&lmdev->dev), hcd->self.busnum);
+		    dev_name(dev), hcd->self.busnum);
 
 	return 0;
 
@@ -575,10 +576,10 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
 	usb_put_hcd(hcd);
 
 	/* FIXME: 2008/05/03 by Steven
-	 * write back to lmdev:
+	 * write back to device:
 	 * dwc_otg_hcd has already been released by dwc_otg_hcd_free()
 	 */
-	lm_set_drvdata( lmdev, otg_dev);
+	dev_set_drvdata(dev, otg_dev);
 
  error1:
 	return retval;
@@ -588,9 +589,9 @@ int dwc_otg_hcd_init(struct lm_device *lmdev)
  * Removes the HCD.
  * Frees memory and resources associated with the HCD and deregisters the bus.
  */
-void dwc_otg_hcd_remove(struct lm_device *lmdev)
+void dwc_otg_hcd_remove(struct device *dev)
 {
-	dwc_otg_device_t *otg_dev = lm_get_drvdata(lmdev);
+	dwc_otg_device_t *otg_dev = dev_get_drvdata(dev);
 	dwc_otg_hcd_t *dwc_otg_hcd;
 	struct usb_hcd *hcd;
 
@@ -671,10 +672,10 @@ int dwc_otg_hcd_start(struct usb_hcd *hcd)
 {
 	dwc_otg_hcd_t *dwc_otg_hcd = hcd_to_dwc_otg_hcd(hcd);
 	dwc_otg_core_if_t *core_if = dwc_otg_hcd->core_if;
-	struct usb_bus *bus;
+  	struct usb_bus *bus;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
-	struct usb_device *udev;
+  	struct usb_device *udev;
 	int retval;
 #endif
 

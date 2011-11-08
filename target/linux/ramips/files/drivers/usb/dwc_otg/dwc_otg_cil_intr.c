@@ -269,7 +269,7 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 			    "Host Negotiation Detected++ (%s)\n",
                             (dwc_otg_is_host_mode(core_if)?"Host":"Device"));
                 if (dwc_otg_is_device_mode(core_if)){
-			DWC_DEBUGPL(DBG_ANY, "a_suspend->a_peripheral (%d)\n", core_if->op_state);
+                	DWC_DEBUGPL(DBG_ANY, "a_suspend->a_peripheral (%d)\n", core_if->op_state);
                         hcd_disconnect(core_if);
                         pcd_start(core_if);
                         core_if->op_state = A_PERIPHERAL;
@@ -394,7 +394,7 @@ int32_t dwc_otg_handle_conn_id_status_change_intr(dwc_otg_core_if_t *core_if)
 
 	/*
 	 * Need to schedule a work, as there are possible DELAY function calls
-	 */
+ 	*/
 	queue_work(core_if->wq_otg, &core_if->w_conn_id);
 
 	/* Set flag and clear interrupt */

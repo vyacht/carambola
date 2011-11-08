@@ -39,7 +39,7 @@
  * removed (using rmmod), the dwc_otg_driver_cleanup function is called.
  *
  * This module also defines a data structure for the dwc_otg_driver, which is
- * used in conjunction with the standard ARM lm_device structure. These
+ * used in conjunction with the standard ARM platform_device structure. These
  * structures allow the OTG driver to comply with the standard Linux driver
  * model in which devices and drivers are registered with a bus driver. This
  * has the benefit that Linux can expose attributes of the driver and device
@@ -57,6 +57,7 @@
 #include <linux/types.h>
 #include <linux/stat.h>	 /* permission constants */
 #include <linux/version.h>
+#include <linux/platform_device.h>
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
 # include <linux/irq.h>
@@ -67,10 +68,6 @@
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
 # include <asm/irq.h>
 #endif
-
-#include <asm/mach-ralink/lm.h>
-#include <asm/mach-ralink/rt305x_regs.h>
-#include <asm/mach-ralink/rt305x.h>
 
 #include "linux/dwc_otg_plat.h"
 #include "dwc_otg_attr.h"
@@ -600,44 +597,44 @@ static irqreturn_t dwc_otg_common_irq(int irq, void *dev
 }
 
 /**
- * This function is called when a lm_device is unregistered with the
+ * This function is called when a platform_device is unregistered with the
  * dwc_otg_driver. This happens, for example, when the rmmod command is
  * executed. The device may or may not be electrically present. If it is
  * present, the driver stops device processing. Any resources used on behalf
  * of this device are freed.
  *
- * @param[in] lmdev
+ * @param[in] pdev
  */
-static void dwc_otg_driver_remove(struct lm_device *lmdev)
+static int dwc_otg_driver_remove(struct platform_device *pdev)
 {
-	dwc_otg_device_t *otg_dev = lm_get_drvdata(lmdev);
-	DWC_DEBUGPL(DBG_ANY, "%s(%p)\n", __func__, lmdev);
+	dwc_otg_device_t *otg_dev = platform_get_drvdata(pdev);
+	DWC_DEBUGPL(DBG_ANY, "%s(%p)\n", __func__, pdev);
 
 	if (!otg_dev) {
 		/* Memory allocation for the dwc_otg_device failed. */
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev NULL!\n", __func__);
-		return;
+		return 0;
 	}
 
 	/*
 	 * Free the IRQ
 	 */
 	if (otg_dev->common_irq_installed) {
-		free_irq(lmdev->irq, otg_dev);
+		free_irq(otg_dev->irq, otg_dev);
 	}
 
 #ifndef DWC_DEVICE_ONLY
 	if (otg_dev->hcd) {
-		dwc_otg_hcd_remove(lmdev);
+		dwc_otg_hcd_remove(&pdev->dev);
 	} else {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev->hcd NULL!\n", __func__);
-		return;
+		return 0;
 	}
 #endif
 
 #ifndef DWC_HOST_ONLY
 	if (otg_dev->pcd) {
-		dwc_otg_pcd_remove(lmdev);
+		dwc_otg_pcd_remove(pdev);
 	}
 #endif
 	if (otg_dev->core_if) {
@@ -647,7 +644,10 @@ static void dwc_otg_driver_remove(struct lm_device *lmdev)
 	/*
 	 * Remove the device attributes
 	 */
-	dwc_otg_attr_remove(lmdev);
+	dwc_otg_attr_remove(otg_dev->parent);
+
+	/* Disable USB port */
+	dwc_write_reg32((uint32_t *)((uint8_t *)otg_dev->base + 0xe00), 0xf);
 
 	/*
 	 * Return the memory.
@@ -655,66 +655,101 @@ static void dwc_otg_driver_remove(struct lm_device *lmdev)
 	if (otg_dev->base) {
 		iounmap(otg_dev->base);
 	}
+
+	if (otg_dev->phys_addr != 0) {
+		release_mem_region(otg_dev->phys_addr, otg_dev->base_len);
+	}
+
 	kfree(otg_dev);
 
 	/*
 	 * Clear the drvdata pointer.
 	 */
-	lm_set_drvdata(lmdev, 0);
+	platform_set_drvdata(pdev, NULL);
+
+	return 0;
 }
 
 /**
- * This function is called when an lm_device is bound to a
+ * This function is called when an platform_device is bound to a
  * dwc_otg_driver. It creates the driver components required to
  * control the device (CIL, HCD, and PCD) and it initializes the
  * device. The driver components are stored in a dwc_otg_device
  * structure. A reference to the dwc_otg_device is saved in the
- * lm_device. This allows the driver to access the dwc_otg_device
+ * platform_device. This allows the driver to access the dwc_otg_device
  * structure on subsequent calls to driver methods for this device.
  *
- * @param[in] lmdev  lm_device definition
+ * @param[in] pdev  platform_device definition
  */
-static int dwc_otg_driver_probe(struct lm_device *lmdev)
+static int dwc_otg_driver_probe(struct platform_device *pdev)
 {
 	int retval = 0;
 	uint32_t snpsid;
-	dwc_otg_device_t *dwc_otg_device;
+	dwc_otg_device_t *otg_dev;
+	struct resource *res;
 
-	dev_dbg(&lmdev->dev, "dwc_otg_driver_probe(%p)\n", lmdev);
-	dev_dbg(&lmdev->dev, "start=0x%08x\n", (unsigned)lmdev->resource.start);
+	dev_dbg(&pdev->dev, "dwc_otg_driver_probe(%p)\n", pdev);
 
-	dwc_otg_device = kmalloc(sizeof(dwc_otg_device_t), GFP_KERNEL);
-
-	if (!dwc_otg_device) {
-		dev_err(&lmdev->dev, "kmalloc of dwc_otg_device failed\n");
+	otg_dev= kzalloc(sizeof(dwc_otg_device_t), GFP_KERNEL);
+	if (!otg_dev) {
+		dev_err(&pdev->dev, "kmalloc of dwc_otg_device failed\n");
 		retval = -ENOMEM;
 		goto fail;
 	}
 
-	memset(dwc_otg_device, 0, sizeof(*dwc_otg_device));
-	dwc_otg_device->reg_offset = 0xFFFFFFFF;
+	otg_dev->reg_offset = 0xFFFFFFFF;
+
+	/*
+	 * Retrieve the memory and IRQ resources.
+	 */
+	otg_dev->irq = platform_get_irq(pdev, 0);
+	if (otg_dev->irq <= 0) {
+		dev_err(&pdev->dev, "no device irq\n");
+		retval = -EINVAL;
+		goto fail;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (res == NULL) {
+		dev_err(&pdev->dev, "no CSR address\n");
+		retval = -EINVAL;
+		goto fail;
+	}
+
+	otg_dev->parent = &pdev->dev;
+	otg_dev->phys_addr = res->start;
+	otg_dev->base_len = res->end - res->start + 1;
+	if (request_mem_region(otg_dev->phys_addr,
+			       otg_dev->base_len,
+			       dwc_driver_name) == NULL) {
+		dev_err(&pdev->dev, "request_mem_region failed\n");
+		retval = -EBUSY;
+		goto fail;
+	}
 
 	/*
 	 * Map the DWC_otg Core memory into virtual address space.
 	 */
-	dwc_otg_device->base = ioremap(lmdev->resource.start, 0x00040000);
-
-	if (!dwc_otg_device->base) {
-		dev_err(&lmdev->dev, "ioremap() failed\n");
+	otg_dev->base = ioremap(otg_dev->phys_addr, otg_dev->base_len);
+	if (!otg_dev->base) {
+		dev_err(&pdev->dev, "ioremap() failed\n");
 		retval = -ENOMEM;
 		goto fail;
 	}
-	dev_dbg(&lmdev->dev, "base=0x%08x\n", (unsigned)dwc_otg_device->base);
+	dev_dbg(&pdev->dev, "mapped base=0x%08x\n", (unsigned) otg_dev->base);
+
+	/* Enable USB Port */
+	dwc_write_reg32((uint32_t *)((uint8_t *)otg_dev->base + 0xe00), 0);
 
 	/*
 	 * Attempt to ensure this device is really a DWC_otg Controller.
 	 * Read and verify the SNPSID register contents. The value should be
 	 * 0x45F42XXX, which corresponds to "OT2", as in "OTG version 2.XX".
 	 */
-	snpsid = dwc_read_reg32((uint32_t *)((uint8_t *)dwc_otg_device->base + 0x40));
+	snpsid = dwc_read_reg32((uint32_t *)((uint8_t *)otg_dev->base + 0x40));
 
 	if ((snpsid & 0xFFFFF000) != OTG_CORE_REV_2_00) {
-		dev_err(&lmdev->dev, "Bad value for SNPSID: 0x%08x\n", snpsid);
+		dev_err(&pdev->dev, "Bad value for SNPSID: 0x%08x\n", snpsid);
 		retval = -EINVAL;
 		goto fail;
 	}
@@ -729,16 +764,17 @@ static int dwc_otg_driver_probe(struct lm_device *lmdev)
 	 * Initialize driver data to point to the global DWC_otg
 	 * Device structure.
 	 */
-	lm_set_drvdata(lmdev, dwc_otg_device);
-	dev_dbg(&lmdev->dev, "dwc_otg_device=0x%p\n", dwc_otg_device);
+	platform_set_drvdata(pdev, otg_dev);
+	dev_dbg(&pdev->dev, "dwc_otg_device=0x%p\n", otg_dev);
 
-	dwc_otg_device->core_if = dwc_otg_cil_init(dwc_otg_device->base,
+
+	otg_dev->core_if = dwc_otg_cil_init(otg_dev->base,
 						   &dwc_otg_module_params);
 
-	dwc_otg_device->core_if->snpsid = snpsid;
+	otg_dev->core_if->snpsid = snpsid;
 
-	if (!dwc_otg_device->core_if) {
-		dev_err(&lmdev->dev, "CIL initialization failed!\n");
+	if (!otg_dev->core_if) {
+		dev_err(&pdev->dev, "CIL initialization failed!\n");
 		retval = -ENOMEM;
 		goto fail;
 	}
@@ -746,7 +782,7 @@ static int dwc_otg_driver_probe(struct lm_device *lmdev)
 	/*
 	 * Validate parameter values.
 	 */
-	if (check_parameters(dwc_otg_device->core_if)) {
+	if (check_parameters(otg_dev->core_if)) {
 		retval = -EINVAL;
 		goto fail;
 	}
@@ -754,43 +790,43 @@ static int dwc_otg_driver_probe(struct lm_device *lmdev)
 	/*
 	 * Create Device Attributes in sysfs
 	 */
-	dwc_otg_attr_create(lmdev);
+	dwc_otg_attr_create(&pdev->dev);
 
 	/*
 	 * Disable the global interrupt until all the interrupt
 	 * handlers are installed.
 	 */
-	dwc_otg_disable_global_interrupts(dwc_otg_device->core_if);
+	dwc_otg_disable_global_interrupts(otg_dev->core_if);
 
 	/*
 	 * Install the interrupt handler for the common interrupts before
 	 * enabling common interrupts in core_init below.
 	 */
 	DWC_DEBUGPL(DBG_CIL, "registering (common) handler for irq%d\n",
-		    lmdev->irq);
-	retval = request_irq(lmdev->irq, dwc_otg_common_irq,
-			     IRQF_SHARED, "dwc_otg", dwc_otg_device);
+		    otg_dev->irq);
+	retval = request_irq(otg_dev->irq, dwc_otg_common_irq,
+			     IRQF_SHARED, "dwc_otg", otg_dev);
 	if (retval) {
-		DWC_ERROR("request of irq%d failed\n", lmdev->irq);
+		DWC_ERROR("request of irq%d failed\n", otg_dev->irq);
 		retval = -EBUSY;
 		goto fail;
 	} else {
-		dwc_otg_device->common_irq_installed = 1;
+		otg_dev->common_irq_installed = 1;
 	}
 
 	/*
 	 * Initialize the DWC_otg core.
 	 */
-	dwc_otg_core_init(dwc_otg_device->core_if);
+	dwc_otg_core_init(otg_dev->core_if);
 
 #ifndef DWC_HOST_ONLY
 	/*
 	 * Initialize the PCD
 	 */
-	retval = dwc_otg_pcd_init(lmdev);
+	retval = dwc_otg_pcd_init(pdev);
 	if (retval != 0) {
 		DWC_ERROR("dwc_otg_pcd_init failed\n");
-		dwc_otg_device->pcd = NULL;
+		otg_dev->pcd = NULL;
 		goto fail;
 	}
 #endif
@@ -798,10 +834,10 @@ static int dwc_otg_driver_probe(struct lm_device *lmdev)
 	/*
 	 * Initialize the HCD
 	 */
-	retval = dwc_otg_hcd_init(lmdev);
+	retval = dwc_otg_hcd_init(&pdev->dev);
 	if (retval != 0) {
 		DWC_ERROR("dwc_otg_hcd_init failed\n");
-		dwc_otg_device->hcd = NULL;
+		otg_dev->hcd = NULL;
 		goto fail;
 	}
 #endif
@@ -810,12 +846,12 @@ static int dwc_otg_driver_probe(struct lm_device *lmdev)
 	 * Enable the global interrupt after all the interrupt
 	 * handlers are installed.
 	 */
-	dwc_otg_enable_global_interrupts(dwc_otg_device->core_if);
+	dwc_otg_enable_global_interrupts(otg_dev->core_if);
 
 	return 0;
 
  fail:
-	dwc_otg_driver_remove(lmdev);
+	dwc_otg_driver_remove(pdev);
 	return retval;
 }
 
@@ -830,8 +866,8 @@ static int dwc_otg_driver_probe(struct lm_device *lmdev)
  * to this driver. The remove function is called when a device is
  * unregistered with the bus driver.
  */
-static struct lm_driver dwc_otg_driver = {
-	.drv = {
+static struct platform_driver dwc_otg_driver = {
+	.driver = {
 		.name	= (char *)dwc_driver_name,
 	},
 	.probe		= dwc_otg_driver_probe,
@@ -851,33 +887,18 @@ static struct lm_driver dwc_otg_driver = {
 static int __init dwc_otg_driver_init(void)
 {
 	int retval = 0;
-	struct lm_device *lmdev;
 	int error;
 
-	*(unsigned long *)(KSEG1ADDR(RT305X_OTG_BASE+0xE00)) = 0x0; //Enable USB Port
-
-	lmdev = kzalloc(sizeof(struct lm_device), GFP_KERNEL);
-	if (!lmdev)
-	{
-		printk("\n %s ,kzalloc(lm_device),fail   \n", __func__);
-		return -ENOMEM;
-	}
-
-	lmdev->resource.start = RT305X_OTG_BASE;
-	lmdev->resource.end = RT305X_OTG_BASE + 0x00040000 - 1;
-	lmdev->resource.flags = IORESOURCE_MEM;
-	lmdev->irq = RT305X_INTC_IRQ_OTG;
-	lmdev->id = 0;
-
-	lm_device_register(lmdev);
 	printk(KERN_INFO "%s: version %s\n", dwc_driver_name, DWC_DRIVER_VERSION);
-	retval = lm_driver_register(&dwc_otg_driver);
-	if (retval < 0) {
+
+	retval = platform_driver_register(&dwc_otg_driver);
+	if (retval) {
 		printk(KERN_ERR "%s retval=%d\n", __func__, retval);
 		return retval;
 	}
-	error = driver_create_file(&dwc_otg_driver.drv, &driver_attr_version);
-	error = driver_create_file(&dwc_otg_driver.drv, &driver_attr_debuglevel);
+
+	error = driver_create_file(&dwc_otg_driver.driver, &driver_attr_version);
+	error = driver_create_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
 
 	return retval;
 }
@@ -893,12 +914,11 @@ static void __exit dwc_otg_driver_cleanup(void)
 {
 	printk(KERN_DEBUG "dwc_otg_driver_cleanup()\n");
 
-	driver_remove_file(&dwc_otg_driver.drv, &driver_attr_debuglevel);
-	driver_remove_file(&dwc_otg_driver.drv, &driver_attr_version);
+	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
+	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_version);
 
-	lm_driver_unregister(&dwc_otg_driver);
+	platform_driver_unregister(&dwc_otg_driver);
 
-	*(unsigned long *)(KSEG1ADDR(RT305X_OTG_BASE+0xE00)) = 0xF; //Disable USB Port
 	printk(KERN_INFO "%s module removed\n", dwc_driver_name);
 }
 module_exit(dwc_otg_driver_cleanup);

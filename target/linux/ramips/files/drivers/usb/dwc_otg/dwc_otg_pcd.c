@@ -74,8 +74,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/version.h>
 
-#include <asm/rt2880/lm.h>
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,21)
 # include <linux/usb/ch9.h>
 #else
@@ -866,10 +864,10 @@ void dwc_otg_ep_free_desc_chain(dwc_otg_dma_desc_t* desc_addr, uint32_t dma_desc
 void dwc_otg_iso_ep_start_ddma_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *dwc_ep)
 {
 
-	dsts_data_t 		dsts = { .d32 = 0};
+ 	dsts_data_t 		dsts = { .d32 = 0};
 	depctl_data_t 		depctl = { .d32 = 0 };
 	volatile uint32_t 	*addr;
-	int 			i, j;
+ 	int 			i, j;
 
 	if(dwc_ep->is_in)
 		dwc_ep->desc_cnt = dwc_ep->buf_proc_intrvl / dwc_ep->bInterval;
@@ -1175,7 +1173,7 @@ void dwc_otg_iso_ep_start_buf_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 
 void dwc_otg_iso_ep_start_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 {
-	if (core_if->dma_enable) {
+ 	if(core_if->dma_enable) {
 		if(core_if->dma_desc_enable) {
 			if(ep->is_in) {
 				ep->desc_cnt = ep->pkt_cnt / ep->pkt_per_frm;
@@ -1437,7 +1435,7 @@ static int dwc_otg_pcd_iso_ep_stop(struct usb_ep *usb_ep, struct usb_iso_request
  */
 void dwc_otg_iso_buffer_done(dwc_otg_pcd_ep_t *ep, dwc_otg_pcd_iso_request_t *req)
 {
-	int i;
+ 	int i;
 	struct usb_gadget_iso_packet_descriptor *iso_packet;
 	dwc_ep_t *dwc_ep;
 
@@ -2177,17 +2175,17 @@ static void dwc_otg_pcd_gadget_release(struct device *dev)
  *
  */
 
-int dwc_otg_pcd_init(struct lm_device *lmdev)
+int dwc_otg_pcd_init(struct device *dev)
 {
 	static char pcd_name[] = "dwc_otg_pcd";
 	dwc_otg_pcd_t *pcd;
 	dwc_otg_core_if_t* core_if;
 	dwc_otg_dev_if_t* dev_if;
-	dwc_otg_device_t *otg_dev = lm_get_drvdata(lmdev);
+	dwc_otg_device_t *otg_dev = dev_get_drvdata(dev);
 	int retval = 0;
 
 
-	DWC_DEBUGPL(DBG_PCDV,"%s(%p)\n",__func__, lmdev);
+	DWC_DEBUGPL(DBG_PCDV,"%s(%p)\n",__func__, dev);
 	/*
 	 * Allocate PCD structure
 	 */
@@ -2205,9 +2203,9 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 	pcd->gadget.name = pcd_name;
 	strcpy(pcd->gadget.dev.bus_id, "gadget");
 
-	pcd->otg_dev = lm_get_drvdata(lmdev);
+	pcd->otg_dev = dev_get_drvdata(dev);
 
-	pcd->gadget.dev.parent = &lmdev->dev;
+	pcd->gadget.dev.parent = dev;
 	pcd->gadget.dev.release = dwc_otg_pcd_gadget_release;
 	pcd->gadget.ops = &dwc_otg_pcd_ops;
 
@@ -2276,11 +2274,11 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 	/*
 	 * Setup interupt handler
 	 */
-	DWC_DEBUGPL(DBG_ANY, "registering handler for irq%d\n", lmdev->irq);
-	retval = request_irq(lmdev->irq, dwc_otg_pcd_irq,
+	DWC_DEBUGPL(DBG_ANY, "registering handler for irq%d\n", otg_dev->irq);
+	retval = request_irq(otg_dev->irq, dwc_otg_pcd_irq,
 				SA_SHIRQ, pcd->gadget.name, pcd);
 	if (retval != 0) {
-		DWC_ERROR("request of irq%d failed\n", lmdev->irq);
+		DWC_ERROR("request of irq%d failed\n", otg_dev->irq);
 		device_unregister(&pcd->gadget.dev);
 		kfree (pcd);
 		return -EBUSY;
@@ -2292,7 +2290,7 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 	if (GET_CORE_IF(pcd)->dma_enable) {
 		pcd->setup_pkt = dma_alloc_coherent (NULL, sizeof (*pcd->setup_pkt) * 5, &pcd->setup_pkt_dma_handle, 0);
 		if (pcd->setup_pkt == 0) {
-			free_irq(lmdev->irq, pcd);
+			free_irq(otg_dev->irq, pcd);
 			device_unregister(&pcd->gadget.dev);
 			kfree (pcd);
 			return -ENOMEM;
@@ -2301,7 +2299,7 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 		pcd->status_buf = dma_alloc_coherent (NULL, sizeof (uint16_t), &pcd->status_buf_dma_handle, 0);
 		if (pcd->status_buf == 0) {
 			dma_free_coherent(NULL, sizeof(*pcd->setup_pkt), pcd->setup_pkt, pcd->setup_pkt_dma_handle);
-			free_irq(lmdev->irq, pcd);
+			free_irq(otg_dev->irq, pcd);
 			device_unregister(&pcd->gadget.dev);
 			kfree (pcd);
 			return -ENOMEM;
@@ -2331,7 +2329,7 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 				dma_free_coherent(NULL, sizeof(*pcd->status_buf), pcd->status_buf, pcd->setup_pkt_dma_handle);
 				dma_free_coherent(NULL, sizeof(*pcd->setup_pkt), pcd->setup_pkt, pcd->setup_pkt_dma_handle);
 
-				free_irq(lmdev->irq, pcd);
+				free_irq(otg_dev->irq, pcd);
 				device_unregister(&pcd->gadget.dev);
 				kfree (pcd);
 
@@ -2342,7 +2340,7 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 	else {
 		pcd->setup_pkt = kmalloc (sizeof (*pcd->setup_pkt) * 5, GFP_KERNEL);
 		if (pcd->setup_pkt == 0) {
-			free_irq(lmdev->irq, pcd);
+			free_irq(otg_dev->irq, pcd);
 			device_unregister(&pcd->gadget.dev);
 			kfree (pcd);
 			return -ENOMEM;
@@ -2351,7 +2349,7 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 		pcd->status_buf = kmalloc (sizeof (uint16_t), GFP_KERNEL);
 		if (pcd->status_buf == 0) {
 			kfree(pcd->setup_pkt);
-			free_irq(lmdev->irq, pcd);
+			free_irq(otg_dev->irq, pcd);
 			device_unregister(&pcd->gadget.dev);
 			kfree (pcd);
 			return -ENOMEM;
@@ -2369,18 +2367,18 @@ int dwc_otg_pcd_init(struct lm_device *lmdev)
 /**
  * Cleanup the PCD.
  */
-void dwc_otg_pcd_remove(struct lm_device *lmdev)
+void dwc_otg_pcd_remove(struct device *dev)
 {
-	dwc_otg_device_t *otg_dev = lm_get_drvdata(lmdev);
+	dwc_otg_device_t *otg_dev = dev_get_drvdata(dev);
 	dwc_otg_pcd_t *pcd = otg_dev->pcd;
 	dwc_otg_dev_if_t* dev_if = GET_CORE_IF(pcd)->dev_if;
 
-	DWC_DEBUGPL(DBG_PCDV, "%s(%p)\n", __func__, lmdev);
+	DWC_DEBUGPL(DBG_PCDV, "%s(%p)\n", __func__, dev);
 
 	/*
 	 * Free the IRQ
 	 */
-	free_irq(lmdev->irq, pcd);
+	free_irq(otg_dev->irq, pcd);
 
 	 /* start with the driver above us */
 	if (pcd->driver) {

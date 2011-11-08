@@ -61,7 +61,7 @@ extern struct device_attribute dev_attr_enumspeed;
 extern struct device_attribute dev_attr_hptxfsiz;
 extern struct device_attribute dev_attr_hprt0;
 
-void dwc_otg_attr_create (struct lm_device *lmdev);
-void dwc_otg_attr_remove (struct lm_device *lmdev);
+void dwc_otg_attr_create (struct device *dev);
+void dwc_otg_attr_remove (struct device *dev);
 
 #endif

@@ -1,10 +1,13 @@
 hostapd_set_bss_options() {
 	local var="$1"
 	local vif="$2"
-	local enc wpa_group_rekey wps_possible
+	local enc wep_rekey wpa_group_rekey wpa_pair_rekey wpa_master_rekey wps_possible
 
 	config_get enc "$vif" encryption
-	config_get wpa_group_rekey "$vif" wpa_group_rekey
+	config_get wep_rekey        "$vif" wep_rekey        # 300
+	config_get wpa_group_rekey  "$vif" wpa_group_rekey  # 300
+	config_get wpa_pair_rekey   "$vif" wpa_pair_rekey   # 300
+	config_get wpa_master_rekey "$vif" wpa_master_rekey # 640
 	config_get_bool ap_isolate "$vif" isolate 0
 
 	config_get device "$vif" device
@@ -64,6 +67,9 @@ hostapd_set_bss_options() {
 				append "$var" "wpa_passphrase=$psk" "$N"
 			fi
 			wps_possible=1
+			[ -n "$wpa_group_rekey"  ] && append "$var" "wpa_group_rekey=$wpa_group_rekey" "$N"
+			[ -n "$wpa_pair_rekey"   ] && append "$var" "wpa_ptk_rekey=$wpa_pair_rekey"    "$N"
+			[ -n "$wpa_master_rekey" ] && append "$var" "wpa_gmk_rekey=$wpa_master_rekey"  "$N"
 		;;
 		*wpa*)
 			# required fields? formats?
@@ -88,11 +94,11 @@ hostapd_set_bss_options() {
 			config_get nasid "$vif" nasid
 			append "$var" "nas_identifier=$nasid" "$N"
 			append "$var" "eapol_key_index_workaround=1" "$N"
-			append "$var" "radius_acct_interim_interval=300" "$N"
 			append "$var" "ieee8021x=1" "$N"
 			append "$var" "wpa_key_mgmt=WPA-EAP" "$N"
-			append "$var" "wpa_group_rekey=300" "$N"
-			append "$var" "wpa_gmk_rekey=640" "$N"
+			[ -n "$wpa_group_rekey"  ] && append "$var" "wpa_group_rekey=$wpa_group_rekey" "$N"
+			[ -n "$wpa_pair_rekey"   ] && append "$var" "wpa_ptk_rekey=$wpa_pair_rekey"    "$N"
+			[ -n "$wpa_master_rekey" ] && append "$var" "wpa_gmk_rekey=$wpa_master_rekey"  "$N"
 		;;
 		*wep*)
 			config_get key "$vif" key
@@ -111,6 +117,7 @@ hostapd_set_bss_options() {
 				*)
 					append "$var" "wep_key0=$(prepare_key_wep "$key")" "$N"
 					append "$var" "wep_default_key=0" "$N"
+					[ -n "$wep_rekey" ] && append "$var" "wep_rekey_period=$wep_rekey" "$N"
 				;;
 			esac
 			case "$enc" in
@@ -192,16 +199,52 @@ hostapd_set_bss_options() {
 	fi
 }
 
+hostapd_set_log_options() {
+	local var="$1"
+	local cfg="$2"
+	local log_level log_80211 log_8021x log_radius log_wpa log_driver log_iapp log_mlme
+
+	config_get log_level "$cfg" log_level 2
+
+	config_get_bool log_80211  "$cfg" log_80211  1
+	config_get_bool log_8021x  "$cfg" log_8021x  1
+	config_get_bool log_radius "$cfg" log_radius 1
+	config_get_bool log_wpa    "$cfg" log_wpa    1
+	config_get_bool log_driver "$cfg" log_driver 1
+	config_get_bool log_iapp   "$cfg" log_iapp   1
+	config_get_bool log_mlme   "$cfg" log_mlme   1
+
+	local log_mask=$((       \
+		($log_80211  << 0) | \
+		($log_8021x  << 1) | \
+		($log_radius << 2) | \
+		($log_wpa    << 3) | \
+		($log_driver << 4) | \
+		($log_iapp   << 5) | \
+		($log_mlme   << 6)   \
+	))
+
+	append "$var" "logger_syslog=$log_mask" "$N"
+	append "$var" "logger_syslog_level=$log_level" "$N"
+	append "$var" "logger_stdout=$log_mask" "$N"
+	append "$var" "logger_stdout_level=$log_level" "$N"
+}
+
 hostapd_setup_vif() {
 	local vif="$1"
 	local driver="$2"
+	local ifname device channel hwmode
+
 	hostapd_cfg=
 
-	hostapd_set_bss_options hostapd_cfg "$vif"
 	config_get ifname "$vif" ifname
 	config_get device "$vif" device
 	config_get channel "$device" channel
 	config_get hwmode "$device" hwmode
+
+	hostapd_set_log_options hostapd_cfg "$device"
+	hostapd_set_bss_options hostapd_cfg "$vif"
+
 	case "$hwmode" in
 		*bg|*gdt|*gst|*fh) hwmode=g;;
 		*adt|*ast) hwmode=a;;

@@ -1678,7 +1678,7 @@ static int32_t ep0_complete_request(dwc_otg_pcd_ep_t *ep)
 #ifdef DEBUG_EP0
 			DWC_DEBUGPL(DBG_PCDV, "Setup Tx ZLP\n");
 #endif
-			req->req.zero = 0;
+    			req->req.zero = 0;
 		}
 		if(core_if->dma_desc_enable == 0)
 			do_setup_in_status_phase(pcd);
@@ -2045,7 +2045,7 @@ static void set_ddma_iso_pkts_info(dwc_otg_core_if_t *core_if, dwc_ep_t *dwc_ep)
 	iso_pkt_info_t *iso_packet;
 	uint32_t data_per_desc;
 	uint32_t offset;
-	int i, j;
+ 	int i, j;
 
 	iso_packet = dwc_ep->pkt_info;
 
@@ -2174,7 +2174,7 @@ static void set_ddma_iso_pkts_info(dwc_otg_core_if_t *core_if, dwc_ep_t *dwc_ep)
  */
 static void reinit_ddma_iso_xfer(dwc_otg_core_if_t *core_if, dwc_ep_t *dwc_ep)
 {
-	int i, j;
+ 	int i, j;
 	dwc_otg_dma_desc_t* dma_desc;
 	dma_addr_t dma_ad;
 	volatile uint32_t	*addr;
@@ -2359,7 +2359,7 @@ static uint32_t handle_iso_out_pkt_dropped(dwc_otg_core_if_t *core_if, dwc_ep_t 
  */
 static uint32_t set_iso_pkts_info(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 {
-	int i, j;
+ 	int i, j;
 	dma_addr_t dma_ad;
 	iso_pkt_info_t *packet_info = ep->pkt_info;
 	uint32_t offset;
@@ -2830,7 +2830,7 @@ static inline int32_t handle_out_ep_babble_intr(dwc_otg_pcd_t *pcd,
         dwc_otg_core_if_t* core_if;
 	doepmsk_data_t intr_mask = { .d32 = 0};
 
-	DWC_PRINT("INTERRUPT Handler not implemented for %s\n", "OUT EP Babble");
+ 	DWC_PRINT("INTERRUPT Handler not implemented for %s\n", "OUT EP Babble");
 	core_if = GET_CORE_IF(pcd);
 	intr_mask.b.babble = 1;
 

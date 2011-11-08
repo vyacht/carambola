@@ -49,7 +49,6 @@
 #include <linux/interrupt.h>
 #include <linux/dma-mapping.h>
 
-struct lm_device;
 struct dwc_otg_device;
 
 #include "dwc_otg_cil.h"
@@ -224,10 +223,10 @@ typedef struct
 } dwc_otg_pcd_request_t;
 
 
-extern int dwc_otg_pcd_init(struct lm_device *lmdev);
+extern int dwc_otg_pcd_init(struct device *dev);
 
 //extern void dwc_otg_pcd_remove( struct dwc_otg_device *_otg_dev );
-extern void dwc_otg_pcd_remove( struct lm_device *lmdev );
+extern void dwc_otg_pcd_remove( struct device *dev);
 extern int32_t dwc_otg_pcd_handle_intr( dwc_otg_pcd_t *pcd );
 extern void dwc_otg_pcd_start_srp_timer(dwc_otg_pcd_t *pcd );
 

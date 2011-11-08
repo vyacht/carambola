@@ -257,3 +257,4 @@ static inline uint32_t SET_DEBUG_LEVEL( const uint32_t new )
 #define DWC_PRINT(x...) printk( KERN_INFO USB_DWC x )
 
 #endif
+

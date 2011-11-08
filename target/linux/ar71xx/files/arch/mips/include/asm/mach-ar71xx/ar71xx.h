@@ -72,6 +72,8 @@
 
 #define AR933X_UART_BASE	(AR71XX_APB_BASE + 0x00020000)
 #define AR933X_UART_SIZE	0x14
+#define AR933X_GMAC_BASE	(AR71XX_APB_BASE + 0x00070000)
+#define AR933X_GMAC_SIZE	0x04
 #define AR933X_WMAC_BASE	(AR71XX_APB_BASE + 0x00100000)
 #define AR933X_WMAC_SIZE	0x20000
 
@@ -678,6 +680,9 @@ void ar71xx_ddr_flush(u32 reg);
 #define AR933X_RESET_GE0_MDIO		BIT(22)
 #define AR933X_RESET_GE1_MAC		BIT(13)
 #define AR933X_RESET_GE0_MAC		BIT(9)
+#define AR933X_RESET_USB_HOST		BIT(5)
+#define AR933X_RESET_USB_PHY		BIT(4)
+#define AR933X_RESET_USBSUS_OVERRIDE	BIT(3)
 
 #define REV_ID_MAJOR_MASK	0xfff0
 #define REV_ID_MAJOR_AR71XX	0x00a0
@@ -724,6 +729,7 @@ static inline u32 ar71xx_reset_rr(unsigned reg)
 
 void ar71xx_device_stop(u32 mask);
 void ar71xx_device_start(u32 mask);
+void ar71xx_device_reset_rmw(u32 clear, u32 set);
 int ar71xx_device_stopped(u32 mask);
 
 /*
@@ -763,6 +769,23 @@ void ar71xx_flash_release(void);
 
 #define MII1_CTRL_IF_RGMII	0
 #define MII1_CTRL_IF_RMII	1
+
+/*
+ * AR933X GMAC
+ */
+#define AR933X_GMAC_REG_ETH_CFG		0x00
+
+#define AR933X_ETH_CFG_RGMII_GE0	BIT(0)
+#define AR933X_ETH_CFG_MII_GE0		BIT(1)
+#define AR933X_ETH_CFG_GMII_GE0		BIT(2)
+#define AR933X_ETH_CFG_MII_GE0_MASTER	BIT(3)
+#define AR933X_ETH_CFG_MII_GE0_SLAVE	BIT(4)
+#define AR933X_ETH_CFG_MII_GE0_ERR_EN	BIT(5)
+#define AR933X_ETH_CFG_SW_PHY_SWAP	BIT(7)
+#define AR933X_ETH_CFG_SW_PHY_ADDR_SWAP	BIT(8)
+#define AR933X_ETH_CFG_RMII_GE0		BIT(9)
+#define AR933X_ETH_CFG_RMII_GE0_SPD_10	0
+#define AR933X_ETH_CFG_RMII_GE0_SPD_100	BIT(10)
 
 #endif /* __ASSEMBLER__ */
 

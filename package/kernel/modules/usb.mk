@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2010 OpenWrt.org
+# Copyright (C) 2006-2011 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -14,10 +14,11 @@ USBINPUT_DIR?=input/misc
 define KernelPackage/usb-core
   SUBMENU:=$(USB_MENU)
   TITLE:=Support for USB
-  DEPENDS:=@USB_SUPPORT +kmod-nls-base
+  DEPENDS:=@USB_SUPPORT
   KCONFIG:=CONFIG_USB CONFIG_XPS_USB_HCD_XILINX=n CONFIG_USB_FHCI_HCD=n
   FILES:=$(LINUX_DIR)/drivers/usb/core/usbcore.ko
   AUTOLOAD:=$(call AutoLoad,20,usbcore,1)
+  $(call AddDepends/nls)
 endef
 
 define KernelPackage/usb-core/description
@@ -142,6 +143,7 @@ $(eval $(call KernelPackage,nop-usb-xceiv))
 define KernelPackage/tusb6010
   TITLE:=Support for TUSB 6010
   KCONFIG:= \
+	CONFIG_USB_MUSB_TUSB6010 \
 	CONFIG_USB_TUSB6010=y
   DEPENDS:=+kmod-musb-hdrc +kmod-nop-usb-xceiv
   $(call AddDepends/usb)
@@ -544,7 +546,7 @@ $(eval $(call KernelPackage,usb-serial-keyspan))
 
 define KernelPackage/usb-serial-wwan
   TITLE:=Support for GSM and CDMA modems
-  DEPENDS:= @LINUX_2_6_35||LINUX_2_6_36||LINUX_2_6_37||LINUX_2_6_38||LINUX_2_6_39||LINUX_3_0
+  DEPENDS:= @!LINUX_2_6_30&&!LINUX_2_6_31&&!LINUX_2_6_32
   KCONFIG:=CONFIG_USB_SERIAL_WWAN
   FILES:=$(LINUX_DIR)/drivers/usb/serial/usb_wwan.ko
   AUTOLOAD:=$(call AutoLoad,61,usb_wwan)
@@ -560,7 +562,7 @@ $(eval $(call KernelPackage,usb-serial-wwan))
 
 define KernelPackage/usb-serial-option
   TITLE:=Support for Option HSDPA modems
-  DEPENDS:=+LINUX_2_6_35||LINUX_2_6_36||LINUX_2_6_37||LINUX_2_6_38||LINUX_2_6_39||LINUX_3_0:kmod-usb-serial-wwan
+  DEPENDS:=+!LINUX_2_6_30&&!LINUX_2_6_31&&!LINUX_2_6_32:kmod-usb-serial-wwan
   KCONFIG:=CONFIG_USB_SERIAL_OPTION
   FILES:=$(LINUX_DIR)/drivers/usb/serial/option.ko
   AUTOLOAD:=$(call AutoLoad,65,option)
@@ -576,7 +578,7 @@ $(eval $(call KernelPackage,usb-serial-option))
 
 define KernelPackage/usb-storage
   TITLE:=USB Storage support
-  DEPENDS:= +!TARGET_x86:kmod-scsi-core
+  DEPENDS:= +kmod-scsi-core
   KCONFIG:=CONFIG_USB_STORAGE
   FILES:=$(LINUX_DIR)/drivers/usb/storage/usb-storage.ko
   AUTOLOAD:=$(call AutoLoad,60,usb-storage,1)
@@ -945,9 +947,8 @@ endef
 
 $(eval $(call KernelPackage,usb-phidget))
 
-
-define KernelPackage/usb-dwc-otg
-  TITLE:=DWC OTG driver
+define KernelPackage/usb-rt305x-dwc_otg
+  TITLE:=RT305X USB controller driver
   DEPENDS:=@TARGET_ramips_rt305x
   KCONFIG:= \
 	CONFIG_DWC_OTG \
@@ -955,13 +956,13 @@ define KernelPackage/usb-dwc-otg
 	CONFIG_DWC_OTG_DEVICE_ONLY=n \
 	CONFIG_DWC_OTG_DEBUG=n
   FILES:=$(LINUX_DIR)/drivers/usb/dwc_otg/dwc_otg.ko
-  AUTOLOAD:=$(call AutoLoad,54,dwc_otg)
+  AUTOLOAD:=$(call AutoLoad,54,dwc_otg,1)
   $(call AddDepends/usb)
 endef
 
-define KernelPackage/usb-dwc-otg/description
+define KernelPackage/usb-rt305x-dwc_otg/description
   This driver provides USB Device Controller support for the
-  Synopsys DesignWare USB OTG Core used in various SoCs.
+  Synopsys DesignWare USB OTG Core used in the Ralink RT305X SoCs.
 endef
 
-$(eval $(call KernelPackage,usb-dwc-otg))
+$(eval $(call KernelPackage,usb-rt305x-dwc_otg))

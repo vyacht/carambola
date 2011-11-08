@@ -1504,7 +1504,7 @@ typedef struct dwc_otg_dma_desc
 	/** DMA Descriptor status quadlet */
 	desc_sts_data_t	status;
 	/** DMA Descriptor data buffer pointer */
-	dma_addr_t	buf;
+ 	dma_addr_t	buf;
 } dwc_otg_dma_desc_t;
 
 /**

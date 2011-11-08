@@ -15,7 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/skbuff.h>
-#include <linux/rtl8366s.h>
+#include <linux/rtl8366.h>
 
 #include "rtl8366_smi.h"
 
@@ -250,7 +250,7 @@ static int rtl8366s_reset_chip(struct rtl8366_smi *smi)
 
 static int rtl8366s_hw_init(struct rtl8366_smi *smi)
 {
-	struct rtl8366s_platform_data *pdata;
+	struct rtl8366_platform_data *pdata;
 	int err;
 
 	pdata = smi->parent->platform_data;
@@ -655,6 +655,49 @@ static int rtl8366s_sw_set_blinkrate(struct switch_dev *dev,
 				val->value.i);
 }
 
+static int rtl8366s_sw_get_max_length(struct switch_dev *dev,
+					const struct switch_attr *attr,
+					struct switch_val *val)
+{
+	struct rtl8366_smi *smi = sw_to_rtl8366_smi(dev);
+	u32 data;
+
+	rtl8366_smi_read_reg(smi, RTL8366S_SGCR, &data);
+
+	val->value.i = ((data & (RTL8366S_SGCR_MAX_LENGTH_MASK)) >> 4);
+
+	return 0;
+}
+
+static int rtl8366s_sw_set_max_length(struct switch_dev *dev,
+					const struct switch_attr *attr,
+					struct switch_val *val)
+{
+	struct rtl8366_smi *smi = sw_to_rtl8366_smi(dev);
+	char length_code;
+
+	switch (val->value.i) {
+		case 0:
+			length_code = RTL8366S_SGCR_MAX_LENGTH_1522;
+			break;
+		case 1:
+			length_code = RTL8366S_SGCR_MAX_LENGTH_1536;
+			break;
+		case 2:
+			length_code = RTL8366S_SGCR_MAX_LENGTH_1552;
+			break;
+		case 3:
+			length_code = RTL8366S_SGCR_MAX_LENGTH_16000;
+			break;
+		default:
+			return -EINVAL;
+	}
+
+	return rtl8366_smi_rmwr(smi, RTL8366S_SGCR,
+			RTL8366S_SGCR_MAX_LENGTH_MASK,
+			length_code);
+}
+
 static int rtl8366s_sw_get_learning_enable(struct switch_dev *dev,
 					   const struct switch_attr *attr,
 					   struct switch_val *val)
@@ -863,6 +906,14 @@ static struct switch_attr rtl8366s_globals[] = {
 		.set = rtl8366s_sw_set_blinkrate,
 		.get = rtl8366s_sw_get_blinkrate,
 		.max = 5
+	}, {
+		.type = SWITCH_TYPE_INT,
+		.name = "max_length",
+		.description = "Get/Set the maximum length of valid packets"
+		" (0 = 1522, 1 = 1536, 2 = 1552, 3 = 16000 (9216?))",
+		.set = rtl8366s_sw_set_max_length,
+		.get = rtl8366s_sw_get_max_length,
+		.max = 3,
 	},
 };
 
@@ -945,7 +996,7 @@ static int rtl8366s_switch_init(struct rtl8366_smi *smi)
 	dev->ports = RTL8366S_NUM_PORTS;
 	dev->vlans = RTL8366S_NUM_VIDS;
 	dev->ops = &rtl8366_ops;
-	dev->devname = dev_name(smi->parent);
+	dev->alias = dev_name(smi->parent);
 
 	err = register_switch(dev, NULL);
 	if (err)
@@ -1053,7 +1104,7 @@ static struct rtl8366_smi_ops rtl8366s_smi_ops = {
 static int __devinit rtl8366s_probe(struct platform_device *pdev)
 {
 	static int rtl8366_smi_version_printed;
-	struct rtl8366s_platform_data *pdata;
+	struct rtl8366_platform_data *pdata;
 	struct rtl8366_smi *smi;
 	int err;
 

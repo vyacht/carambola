@@ -47,7 +47,6 @@
 #include <linux/list.h>
 #include <linux/interrupt.h>
 #include <linux/string.h>
-#include <asm/mach-ralink/lm.h>
 #include <linux/dma-mapping.h>
 
 #include "dwc_otg_driver.h"

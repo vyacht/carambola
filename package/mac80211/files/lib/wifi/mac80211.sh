@@ -16,8 +16,17 @@ mac80211_hostapd_setup_base() {
 	config_get beacon_int "$device" beacon_int
 	config_get basic_rate_list "$device" basic_rate
 	config_get_bool noscan "$device" noscan
+
+	hostapd_set_log_options base_cfg "$device"
+
 	[ -n "$channel" -a -z "$hwmode" ] && wifi_fixup_hwmode "$device"
-	[ "$channel" = auto ] && channel=
+
+	[ "$channel" = auto ] && {
+		channel=$(iw phy "$phy" info | \
+			sed -ne '/MHz/ { /disabled\|passive\|radar/d; s/.*\[//; s/\].*//; p; q }')
+		config_set "$device" channel "$channel"
+	}
+
 	[ -n "$hwmode" ] && {
 		config_get hwmode_11n "$device" hwmode_11n
 		[ -n "$hwmode_11n" ] && {
@@ -197,10 +206,13 @@ find_mac80211_phy() {
 
 scan_mac80211() {
 	local device="$1"
-	local adhoc sta ap monitor mesh
+	local adhoc sta ap monitor mesh disabled
 
 	config_get vifs "$device" vifs
 	for vif in $vifs; do
+		config_get_bool disabled "$vif" disabled 0
+		[ $disabled = 0 ] || continue
+
 		config_get mode "$vif" mode
 		case "$mode" in
 			adhoc|sta|ap|monitor|mesh)
@@ -250,11 +262,27 @@ disable_mac80211() (
 
 	return 0
 )
+
 get_freq() {
 	local phy="$1"
 	local chan="$2"
 	iw "$phy" info | grep -E -m1 "(\* ${chan:-....} MHz${chan:+|\\[$chan\\]})" | grep MHz | awk '{print $2}'
 }
+
+mac80211_generate_mac() {
+	local off="$1"
+	local mac="$2"
+	local oIFS="$IFS"; IFS=":"; set -- $mac; IFS="$oIFS"
+
+	local b2mask=0x00
+	[ $off -gt 0 ] && b2mask=0x02
+
+	printf "%02x:%s:%s:%s:%02x:%02x" \
+		$(( 0x$1 | $b2mask )) $2 $3 $4 \
+		$(( (0x$5 + ($off / 0x100)) % 0x100 )) \
+		$(( (0x$6 + $off) % 0x100 ))
+}
+
 enable_mac80211() {
 	local device="$1"
 	config_get channel "$device" channel
@@ -273,6 +301,13 @@ enable_mac80211() {
 	local apidx=0
 	fixed=""
 	local hostapd_ctrl=""
+
+	[ -n "$country" ] && {
+		iw reg get | grep -q "^country $country:" || {
+			iw reg set "$country"
+			sleep 1
+		}
+	}
 
 	config_get ath9k_chanbw "$device" ath9k_chanbw
 	[ -n "$ath9k_chanbw" -a -d /sys/kernel/debug/ieee80211/$phy/ath9k ] && echo "$ath9k_chanbw" > /sys/kernel/debug/ieee80211/$phy/ath9k/chanbw
@@ -294,13 +329,9 @@ enable_mac80211() {
 
 	wifi_fixup_hwmode "$device" "g"
 	for vif in $vifs; do
-		while [ -d "/sys/class/net/wlan$i" ]; do
-			i=$(($i + 1))
-		done
-
 		config_get ifname "$vif" ifname
 		[ -n "$ifname" ] || {
-			ifname="wlan$i"
+			[ $i -gt 0 ] && ifname="wlan${phy#phy}-$i" || ifname="wlan${phy#phy}"
 		}
 		config_set "$vif" ifname "$ifname"
 
@@ -316,7 +347,6 @@ enable_mac80211() {
 				# Hostapd will handle recreating the interface and
 				# it's accompanying monitor
 				apidx="$(($apidx + 1))"
-				i=$(($i + 1))
 				[ "$apidx" -gt 1 ] || iw phy "$phy" interface add "$ifname" type managed
 			;;
 			mesh)
@@ -341,17 +371,9 @@ enable_mac80211() {
 		# which can either be explicitly set in the device
 		# section, or automatically generated
 		config_get macaddr "$device" macaddr
-		local mac_1="${macaddr%%:*}"
-		local mac_2="${macaddr#*:}"
-
 		config_get vif_mac "$vif" macaddr
 		[ -n "$vif_mac" ] || {
-			if [ "$macidx" -gt 0 ]; then
-				offset="$(( 2 + $macidx * 4 ))"
-			else
-				offset="0"
-			fi
-			vif_mac="$( printf %02x $((0x$mac_1 + $offset)) ):$mac_2"
+			vif_mac="$(mac80211_generate_mac $macidx $macaddr)"
 			macidx="$(($macidx + 1))"
 		}
 		[ "$mode" = "ap" ] || ifconfig "$ifname" hw ether "$vif_mac"
@@ -377,6 +399,8 @@ enable_mac80211() {
 		# wifi-device) if the latter doesn't exist
 		txpower="${txpower:-$vif_txpower}"
 		[ -z "$txpower" ] || iw dev "$ifname" set txpower fixed "${txpower%%.*}00"
+
+		i=$(($i + 1))
 	done
 
 	local start_hostapd=

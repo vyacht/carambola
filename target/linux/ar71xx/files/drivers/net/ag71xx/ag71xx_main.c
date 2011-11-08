@@ -374,8 +374,8 @@ static void ag71xx_dma_reset(struct ag71xx *ag)
 	mdelay(1);
 
 	/* clear descriptor addresses */
-	ag71xx_wr(ag, AG71XX_REG_TX_DESC, 0);
-	ag71xx_wr(ag, AG71XX_REG_RX_DESC, 0);
+	ag71xx_wr(ag, AG71XX_REG_TX_DESC, ag->stop_desc_dma);
+	ag71xx_wr(ag, AG71XX_REG_RX_DESC, ag->stop_desc_dma);
 
 	/* clear pending RX/TX interrupts */
 	for (i = 0; i < 256; i++) {
@@ -423,17 +423,17 @@ static void ag71xx_dma_reset(struct ag71xx *ag)
 			 FIFO_CFG5_LE | FIFO_CFG5_FT | FIFO_CFG5_16 | \
 			 FIFO_CFG5_17 | FIFO_CFG5_SF)
 
-static void ag71xx_hw_init(struct ag71xx *ag)
+static void ag71xx_hw_stop(struct ag71xx *ag)
+{
+	/* disable all interrupts and stop the rx/tx engine */
+	ag71xx_wr(ag, AG71XX_REG_INT_ENABLE, 0);
+	ag71xx_wr(ag, AG71XX_REG_RX_CTRL, 0);
+	ag71xx_wr(ag, AG71XX_REG_TX_CTRL, 0);
+}
+
+static void ag71xx_hw_setup(struct ag71xx *ag)
 {
 	struct ag71xx_platform_data *pdata = ag71xx_get_pdata(ag);
-
-	ag71xx_sb(ag, AG71XX_REG_MAC_CFG1, MAC_CFG1_SR);
-	udelay(20);
-
-	ar71xx_device_stop(pdata->reset_bit);
-	mdelay(100);
-	ar71xx_device_start(pdata->reset_bit);
-	mdelay(100);
 
 	/* setup MAC configuration registers */
 	ag71xx_wr(ag, AG71XX_REG_MAC_CFG1, MAC_CFG1_INIT);
@@ -458,8 +458,67 @@ static void ag71xx_hw_init(struct ag71xx *ag)
 	}
 	ag71xx_wr(ag, AG71XX_REG_FIFO_CFG4, FIFO_CFG4_INIT);
 	ag71xx_wr(ag, AG71XX_REG_FIFO_CFG5, FIFO_CFG5_INIT);
+}
+
+static void ag71xx_hw_init(struct ag71xx *ag)
+{
+	struct ag71xx_platform_data *pdata = ag71xx_get_pdata(ag);
+	u32 reset_mask = pdata->reset_bit;
+
+	ag71xx_hw_stop(ag);
+
+	if (pdata->is_ar724x) {
+		u32 reset_phy = reset_mask;
+
+		reset_phy &= RESET_MODULE_GE0_PHY | RESET_MODULE_GE1_PHY;
+		reset_mask &= ~(RESET_MODULE_GE0_PHY | RESET_MODULE_GE1_PHY);
+
+		ar71xx_device_stop(reset_phy);
+		mdelay(50);
+		ar71xx_device_start(reset_phy);
+		mdelay(200);
+	}
+
+	ag71xx_sb(ag, AG71XX_REG_MAC_CFG1, MAC_CFG1_SR);
+	udelay(20);
+
+	ar71xx_device_stop(reset_mask);
+	mdelay(100);
+	ar71xx_device_start(reset_mask);
+	mdelay(200);
+
+	ag71xx_hw_setup(ag);
 
 	ag71xx_dma_reset(ag);
+}
+
+static void ag71xx_fast_reset(struct ag71xx *ag)
+{
+	struct ag71xx_platform_data *pdata = ag71xx_get_pdata(ag);
+	struct net_device *dev = ag->dev;
+	u32 reset_mask = pdata->reset_bit;
+	u32 rx_ds, tx_ds;
+	u32 mii_reg;
+
+	reset_mask &= RESET_MODULE_GE0_MAC | RESET_MODULE_GE1_MAC;
+
+	mii_reg = ag71xx_rr(ag, AG71XX_REG_MII_CFG);
+	rx_ds = ag71xx_rr(ag, AG71XX_REG_RX_DESC);
+	tx_ds = ag71xx_rr(ag, AG71XX_REG_TX_DESC);
+
+	ar71xx_device_stop(reset_mask);
+	udelay(10);
+	ar71xx_device_start(reset_mask);
+	udelay(10);
+
+	ag71xx_dma_reset(ag);
+	ag71xx_hw_setup(ag);
+
+	ag71xx_wr(ag, AG71XX_REG_RX_DESC, rx_ds);
+	ag71xx_wr(ag, AG71XX_REG_TX_DESC, tx_ds);
+	ag71xx_wr(ag, AG71XX_REG_MII_CFG, mii_reg);
+
+	ag71xx_hw_set_macaddr(ag, dev->dev_addr);
 }
 
 static void ag71xx_hw_start(struct ag71xx *ag)
@@ -469,13 +528,6 @@ static void ag71xx_hw_start(struct ag71xx *ag)
 
 	/* enable interrupts */
 	ag71xx_wr(ag, AG71XX_REG_INT_ENABLE, AG71XX_INT_INIT);
-}
-
-static void ag71xx_hw_stop(struct ag71xx *ag)
-{
-	/* disable all interrupts and stop the rx engine */
-	ag71xx_wr(ag, AG71XX_REG_INT_ENABLE, 0);
-	ag71xx_wr(ag, AG71XX_REG_RX_CTRL, 0);
 }
 
 void ag71xx_link_adjust(struct ag71xx *ag)
@@ -493,6 +545,9 @@ void ag71xx_link_adjust(struct ag71xx *ag)
 			printk(KERN_INFO "%s: link down\n", ag->dev->name);
 		return;
 	}
+
+	if (pdata->is_ar724x)
+		ag71xx_fast_reset(ag);
 
 	cfg2 = ag71xx_rr(ag, AG71XX_REG_MAC_CFG2);
 	cfg2 &= ~(MAC_CFG2_IF_1000 | MAC_CFG2_IF_10_100 | MAC_CFG2_FDX);
@@ -739,15 +794,44 @@ static void ag71xx_tx_timeout(struct net_device *dev)
 static void ag71xx_restart_work_func(struct work_struct *work)
 {
 	struct ag71xx *ag = container_of(work, struct ag71xx, restart_work);
-	struct ag71xx_platform_data *pdata = ag71xx_get_pdata(ag);
+
+	if (ag71xx_get_pdata(ag)->is_ar724x) {
+		ag->link = 0;
+		ag71xx_link_adjust(ag);
+		return;
+	}
 
 	ag71xx_stop(ag->dev);
 	ag71xx_open(ag->dev);
 }
 
+static bool ag71xx_check_dma_stuck(struct ag71xx *ag, unsigned long timestamp)
+{
+	u32 rx_sm, tx_sm, rx_fd;
+
+	if (likely(time_before(jiffies, timestamp + HZ/10)))
+		return false;
+
+	if (!netif_carrier_ok(ag->dev))
+		return false;
+
+	rx_sm = ag71xx_rr(ag, AG71XX_REG_RX_SM);
+	if ((rx_sm & 0x7) == 0x3 && ((rx_sm >> 4) & 0x7) == 0x6)
+		return true;
+
+	tx_sm = ag71xx_rr(ag, AG71XX_REG_TX_SM);
+	rx_fd = ag71xx_rr(ag, AG71XX_REG_FIFO_DEPTH);
+	if (((tx_sm >> 4) & 0x7) == 0 && ((rx_sm & 0x7) == 0) &&
+	    ((rx_sm >> 4) & 0x7) == 0 && rx_fd == 0)
+		return true;
+
+	return false;
+}
+
 static int ag71xx_tx_packets(struct ag71xx *ag)
 {
 	struct ag71xx_ring *ring = &ag->tx_ring;
+	struct ag71xx_platform_data *pdata = ag71xx_get_pdata(ag);
 	int sent;
 
 	DBG("%s: processing TX ring\n", ag->dev->name);
@@ -758,8 +842,12 @@ static int ag71xx_tx_packets(struct ag71xx *ag)
 		struct ag71xx_desc *desc = ring->buf[i].desc;
 		struct sk_buff *skb = ring->buf[i].skb;
 
-		if (!ag71xx_desc_empty(desc))
+		if (!ag71xx_desc_empty(desc)) {
+			if (pdata->is_ar7240 &&
+			    ag71xx_check_dma_stuck(ag, ring->buf[i].timestamp))
+				schedule_work(&ag->restart_work);
 			break;
+		}
 
 		ag71xx_wr(ag, AG71XX_REG_TX_STATUS, TX_STATUS_PS);
 
@@ -1071,6 +1159,16 @@ static int __devinit ag71xx_probe(struct platform_device *pdev)
 	ag->tx_ring.size = AG71XX_TX_RING_SIZE_DEFAULT;
 	ag->rx_ring.size = AG71XX_RX_RING_SIZE_DEFAULT;
 
+	ag->stop_desc = dma_alloc_coherent(NULL,
+		sizeof(struct ag71xx_desc), &ag->stop_desc_dma, GFP_KERNEL);
+
+	if (!ag->stop_desc)
+		goto err_free_irq;
+
+	ag->stop_desc->data = 0;
+	ag->stop_desc->ctrl = 0;
+	ag->stop_desc->next = (u32) ag->stop_desc_dma;
+
 	memcpy(dev->dev_addr, pdata->mac_addr, ETH_ALEN);
 
 	netif_napi_add(dev, &ag->napi, ag71xx_poll, AG71XX_NAPI_WEIGHT);
@@ -1078,7 +1176,7 @@ static int __devinit ag71xx_probe(struct platform_device *pdev)
 	err = register_netdev(dev);
 	if (err) {
 		dev_err(&pdev->dev, "unable to register net device\n");
-		goto err_free_irq;
+		goto err_free_desc;
 	}
 
 	printk(KERN_INFO "%s: Atheros AG71xx at 0x%08lx, irq %d\n",
@@ -1106,6 +1204,9 @@ err_phy_disconnect:
 	ag71xx_phy_disconnect(ag);
 err_unregister_netdev:
 	unregister_netdev(dev);
+err_free_desc:
+	dma_free_coherent(NULL, sizeof(struct ag71xx_desc), ag->stop_desc,
+			  ag->stop_desc_dma);
 err_free_irq:
 	free_irq(dev->irq, dev);
 err_unmap_mii_ctrl:

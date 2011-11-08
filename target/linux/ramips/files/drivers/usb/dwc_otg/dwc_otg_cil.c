@@ -1799,9 +1799,9 @@ void dwc_otg_hc_start_transfer(dwc_otg_core_if_t *core_if, dwc_hc_t *hc)
 			if(!hc->qh->dw_align_buf) {
 				hc->qh->dw_align_buf =
 					dma_alloc_coherent(NULL,
-							   core_if->core_params->max_transfer_size,
-							   &hc->qh->dw_align_buf_dma,
-							   GFP_ATOMIC | GFP_DMA);
+					   		   core_if->core_params->max_transfer_size,
+					   		   &hc->qh->dw_align_buf_dma,
+					   		   GFP_ATOMIC | GFP_DMA);
 				if (!hc->qh->dw_align_buf) {
 
 					DWC_ERROR("%s: Failed to allocate memory to handle "
@@ -2489,7 +2489,7 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 void dwc_otg_ep_start_zl_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 {
 
-	depctl_data_t depctl;
+ 	depctl_data_t depctl;
 	deptsiz_data_t deptsiz;
 	gintmsk_data_t intr_mask = { .d32 = 0};
 
