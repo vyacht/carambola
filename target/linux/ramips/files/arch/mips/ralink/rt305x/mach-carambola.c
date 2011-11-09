@@ -101,8 +101,12 @@ static void __init carambola_init(void)
 	carambola_register_gpiodev();
 	platform_add_devices(carambola_devices, ARRAY_SIZE(carambola_devices));
 	rt305x_register_flash(0, &carambola_flash_data);
+
+	rt305x_esw_data.vlan_config = RT305X_ESW_VLAN_CONFIG_LLLLW;
 	rt305x_register_ethernet();
 	rt305x_register_wifi();
+	rt305x_register_wdt();
+	rt305x_register_usb();
 }
 
 MIPS_MACHINE(RAMIPS_MACH_CARAMBOLA, "CARAMBOLA", "CARAMBOLA",
