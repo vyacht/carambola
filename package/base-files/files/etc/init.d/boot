@@ -15,12 +15,15 @@ system_config() {
 	config_get conloglevel "$cfg" conloglevel
 	config_get buffersize "$cfg" buffersize
 	[ -z "$conloglevel" -a -z "$buffersize" ] || dmesg ${conloglevel:+-n $conloglevel} ${buffersize:+-s $buffersize}
-	
+
 	config_get timezone "$cfg" timezone 'UTC'
 	echo "$timezone" > /tmp/TZ
 
 	config_get zonename "$cfg" zonename
 	[ -n "$zonename" ] && [ -f "/usr/share/zoneinfo/$zonename" ] && ln -s "/usr/share/zoneinfo/$zonename" /tmp/localtime
+
+	# apply timezone to kernel
+	date -k
 
 	if [ -x /sbin/syslogd ]; then
 		local args log_ip log_size log_port log_type log_file
@@ -80,8 +83,8 @@ start() {
 
 	killall -q hotplug2
 	[ -x /sbin/hotplug2 ] && /sbin/hotplug2 --override --persistent \
-			--set-worker /lib/hotplug2/worker_fork.so \
 			--set-rules-file /etc/hotplug2.rules \
+			--set-coldplug-cmd /sbin/udevtrigger \
 			--max-children 1 >/dev/null 2>&1 &
 
 	# the coldplugging of network interfaces needs to happen later, so we do it manually here

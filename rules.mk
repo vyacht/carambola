@@ -106,7 +106,7 @@ TARGET_DIR:=$(TARGET_ROOTFS_DIR)/root-$(BOARD)
 STAGING_DIR_ROOT:=$(STAGING_DIR)/root-$(BOARD)
 BUILD_LOG_DIR:=$(TOPDIR)/logs
 
-TARGET_PATH:=$(STAGING_DIR_HOST)/bin:$(PATH)
+TARGET_PATH:=$(STAGING_DIR_HOST)/bin:$(subst $(space),:,$(filter-out .,$(filter-out ./,$(subst :,$(space),$(PATH)))))
 TARGET_CFLAGS:=$(TARGET_OPTIMIZATION)$(if $(CONFIG_DEBUG), -g3)
 TARGET_CPPFLAGS:=-I$(STAGING_DIR)/usr/include -I$(STAGING_DIR)/include
 TARGET_LDFLAGS:=-L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib
@@ -148,7 +148,7 @@ ifndef DUMP
       ifneq ($(TOOLCHAIN_LIB_DIRS),)
         TARGET_LDFLAGS+= $(patsubst %,-L%,$(TOOLCHAIN_LIB_DIRS))
       endif
-      TOOLCHAIN_DIR:=$(TOOLCHAIN_ROOT_DIR)
+      TARGET_PATH:=$(TOOLCHAIN_DIR)/bin:$(TARGET_PATH)
     endif
   endif
 endif
@@ -170,6 +170,7 @@ PKG_CONFIG:=$(STAGING_DIR_HOST)/bin/pkg-config
 export PKG_CONFIG
 
 HOSTCC:=gcc
+HOSTCC_NOCACHE:=$(HOSTCC)
 HOST_CFLAGS:=-O2 -I$(STAGING_DIR_HOST)/include
 HOST_LDFLAGS:=-L$(STAGING_DIR_HOST)/lib
 
@@ -188,6 +189,7 @@ INSTALL_CONF:=install -m0600
 ifneq ($(CONFIG_CCACHE),)
   TARGET_CC:= ccache $(TARGET_CC)
   TARGET_CXX:= ccache $(TARGET_CXX)
+  HOSTCC:= ccache $(HOSTCC)
 endif
 
 TARGET_CONFIGURE_OPTS = \
