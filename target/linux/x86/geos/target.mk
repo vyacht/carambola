@@ -1,9 +1,9 @@
+LINUX_VERSION:=3.2.2
 BOARDNAME:=Traverse Geos
 FEATURES:=squashfs jffs2 ext4 pci usb gpio
-GEOS_GPIO = $(if $(findstring 2.6.32,$(LINUX_VERSION)),gpio-cs5535,gpio-cs5535-new)
 DEFAULT_PACKAGES += \
             kmod-crypto-hw-geode kmod-crypto-ocf \
-            kmod-$(GEOS_GPIO) kmod-gpio-nsc \
+            kmod-gpio-cs5535-new kmod-gpio-nsc \
             kmod-wdt-geode kmod-cs5535-clockevt kmod-cs5535-mfgpt \
             kmod-cs5536 \
             kmod-hwmon-core kmod-hwmon-lm90 \
@@ -13,13 +13,15 @@ DEFAULT_PACKAGES += \
             kmod-i2c-scx200-acb \
             kmod-usb-core kmod-usb2 kmod-usb-ohci \
             kmod-cfg80211 kmod-mac80211 \
-            kmod-mppe kmod-pppoe kmod-pppoa kmod-pppol2tp \
-            kmod-ath kmod-ath5k kmod-ath9k \
+            kmod-mppe kmod-pppoa kmod-pppol2tp \
+            kmod-ath5k kmod-ath9k \
+            kmod-leds-gpio kmod-input-gpio-keys-polled \
+            kmod-button-hotplug \
+            kmod-ledtrig-heartbeat kmod-ledtrig-gpio \
+            kmod-ledtrig-netdev \
             kmod-cpu-msr \
-            soloscli linux-atm br2684ctl bridge ppp ppp-mod-pppoa \
-            pppdump pppstats \
-            libopenssl ocf-crypto-headers zlib hwclock hostapd \
-            flashrom
+            soloscli linux-atm br2684ctl ppp-mod-pppoa pppdump pppstats \
+            hwclock wpad flashrom
 
 CS5535_MASK:=0x0E000048
 
@@ -30,6 +32,6 @@ define Target/Description
     Build firmware images for Traverse Geos board
 endef
 
-define KernelPackage/$(GEOS_GPIO)/install
-     sed -i -r -e 's/$$$$$$$$/ mask=$(CS5535_MASK)/' $(1)/etc/modules.d/??-$(GEOS_GPIO)
+define KernelPackage/gpio-cs5535-new/install
+     sed -i -r -e 's/$$$$$$$$/ mask=$(CS5535_MASK)/' $(1)/etc/modules.d/??-gpio-cs5535-new
 endef
