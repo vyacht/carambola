@@ -267,7 +267,7 @@ define Image/Build/Profile/WCR150GN
 endef
 
 define Image/Build/Profile/CARAMBOLA
-	$(call Image/Build/Template/GENERIC_8M,$(1),carambola,CARAMBOLA)
+	$(call BuildFirmware/Generic,$(1),carambola,board=CARAMBOLA,,1179648,6881280)
 endef
 
 w502u_cmdline=board=W502U console=ttyS1,115200

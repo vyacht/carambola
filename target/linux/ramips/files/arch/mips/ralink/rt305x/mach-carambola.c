@@ -2,6 +2,7 @@
  *  CARAMBOLA board support
  *
  *  Copyright (C) 2011 Darius Augulis <darius@8devices.com>
+ *  Copyright (C) 2012 Žilvinas Valinskas <zilvinas@8devices.com>
  *
  *  This program is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License version 2 as published
@@ -24,31 +25,39 @@
 #include "devices.h"
 
 #ifdef CONFIG_MTD_PARTITIONS
+
+#define CARAMBOLA_UBOOT_SIZE	0x030000 /*  192KB */
+#define CARAMBOLA_UBOOT_ENV	0x010000 /*   64KB */
+#define CARAMBOLA_FACTORY_SIZE	0x010000 /*   64KB */
+#define CARAMBOLA_KERNEL_SIZE	0x120000 /* 1152KB */
+#define CARAMBOLA_ROOTFS_SIZE	0x690000 /* 6720KB */
+
 static struct mtd_partition carambola_partitions[] = {
 	{
 		.name   = "u-boot",
 		.offset = 0,
-		.size   = SZ_128K + SZ_64K,
+		.size   = CARAMBOLA_UBOOT_SIZE,
+		.mask_flags = MTD_WRITEABLE,	/* precaution */
 	}, {
 		.name   = "u-boot-env",
 		.offset = MTDPART_OFS_APPEND,
-		.size   = SZ_64K,
+		.size   = CARAMBOLA_UBOOT_ENV,
 	}, {
 		.name   = "factory",
 		.offset = MTDPART_OFS_APPEND,
-		.size   = SZ_64K,
+		.size   = CARAMBOLA_FACTORY_SIZE,
 	}, {
 		.name   = "kernel",
-		.offset = SZ_256K + SZ_64K,
-		.size   = SZ_1M,
+		.offset = MTDPART_OFS_APPEND,
+		.size   = CARAMBOLA_KERNEL_SIZE,
 	}, {
 		.name   = "rootfs",
-		.offset = SZ_256K + SZ_64K + SZ_1M,
-		.size   = SZ_4M + SZ_2M,
+		.offset = MTDPART_OFS_APPEND,
+		.size	= CARAMBOLA_ROOTFS_SIZE,
 	}, {
-		.name   = "openwrt",
-		.offset = SZ_256K + SZ_64K,
-		.size   = SZ_4M + SZ_2M + SZ_1M,
+		.name   = "firmware", /* skip u-boot, uboot-env and factory partitions */
+		.offset = CARAMBOLA_UBOOT_SIZE + CARAMBOLA_UBOOT_ENV + CARAMBOLA_FACTORY_SIZE,
+		.size   = CARAMBOLA_KERNEL_SIZE + CARAMBOLA_ROOTFS_SIZE,
 	}
 };
 #endif /* CONFIG_MTD_PARTITIONS */
