@@ -413,7 +413,7 @@ define Image/Build/Profile/XDXRN502J
 endef
 
 define Image/Build/Profile/CARAMBOLA
-	$(call Image/Build/Template/$(fs_squash)/squashfs,CARAMBOLA,carambola,CARAMBOLA)
+	$(call Image/Build/Template/$(fs_squash)/$(1),CARAMBOLA,carambola,CARAMBOLA)
 endef
 
 ifeq ($(CONFIG_RALINK_RT305X),y)
