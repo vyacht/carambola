@@ -10,9 +10,6 @@
 
 #include <linux/init.h>
 #include <linux/platform_device.h>
-#include <linux/mtd/mtd.h>
-#include <linux/mtd/partitions.h>
-#include <linux/mtd/physmap.h>
 #include <linux/gpio.h>
 
 #include <asm/mach-ralink/machine.h>
@@ -25,49 +22,11 @@
 
 #define OMNI_EMB_GPIO_BUTTON_RESET	12 /* active low */
 
-#define OMNI_EMB_BUTTONS_POLL_INTERVAL	20
+#define OMNI_EMB_KEYS_POLL_INTERVAL	20
+#define OMNI_EMB_KEYS_DEBOUNCE_INTERVAL	(3 * OMNI_EMB_KEYS_POLL_INTERVAL)
 
 #define OMNI_EMB_GPIO_LED_STATUS	9
 #define OMNI_EMB_GPIO_LED_WLAN		14
-
-#ifdef CONFIG_MTD_PARTITIONS
-static struct mtd_partition emb_partitions[] = {
-	{
-		.name	= "uboot",
-		.offset	= 0,
-		.size	= 0x030000,
-	}, {
-		.name	= "uboot-config",
-		.offset	= 0x030000,
-		.size	= 0x040000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "factory",
-		.offset	= 0x040000,
-		.size	= 0x050000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "linux",
-		.offset	= 0x050000,
-		.size	= 0x100000,
-	}, {
-		.name	= "rootfs",
-		.offset	= 0x150000,
-		.size	= 0x6B0000,
-	}, {
-		.name	= "firmware",
-		.offset	= 0x050000,
-		.size	= 0x7B0000,
-	}
-};
-#endif /* CONFIG_MTD_PARTITIONS */
-
-static struct physmap_flash_data omni_emb_flash_data = {
-#ifdef CONFIG_MTD_PARTITIONS
-	.nr_parts	= ARRAY_SIZE(emb_partitions),
-	.parts		= emb_partitions,
-#endif
-};
 
 static struct gpio_led omni_emb_leds_gpio[] __initdata = {
 	{
@@ -81,12 +40,12 @@ static struct gpio_led omni_emb_leds_gpio[] __initdata = {
 	}
 };
 
-static struct gpio_button omni_emb_gpio_buttons[] __initdata = {
+static struct gpio_keys_button omni_emb_gpio_buttons[] __initdata = {
 	{
 		.desc           = "reset",
 		.type           = EV_KEY,
 		.code           = KEY_RESTART,
-		.threshold      = 3,
+		.debounce_interval = OMNI_EMB_KEYS_DEBOUNCE_INTERVAL,
 		.gpio           = OMNI_EMB_GPIO_BUTTON_RESET,
 		.active_low     = 1,
 	}
@@ -100,11 +59,11 @@ static void __init omni_emb_init(void)
 
 	ramips_register_gpio_leds(-1, ARRAY_SIZE(omni_emb_leds_gpio),
 				omni_emb_leds_gpio);
-	ramips_register_gpio_buttons(-1, OMNI_EMB_BUTTONS_POLL_INTERVAL,
+	ramips_register_gpio_buttons(-1, OMNI_EMB_KEYS_POLL_INTERVAL,
 				ARRAY_SIZE(omni_emb_gpio_buttons),
 				omni_emb_gpio_buttons);
 
-	rt305x_register_flash(0, &omni_emb_flash_data);
+	rt305x_register_flash(0);
 	rt305x_register_ethernet();
 	rt305x_register_wifi();
 	rt305x_register_wdt();

@@ -10,9 +10,6 @@
 
 #include <linux/init.h>
 #include <linux/platform_device.h>
-#include <linux/mtd/mtd.h>
-#include <linux/mtd/partitions.h>
-#include <linux/mtd/physmap.h>
 
 #include <asm/mach-ralink/machine.h>
 #include <asm/mach-ralink/dev-gpio-buttons.h>
@@ -33,55 +30,8 @@
 #define WL341V3_GPIO_BUTTON_WPS		5	/* active low */
 #define WL341V3_GPIO_BUTTON_RESET	7	/* active low */
 
-#define WL341V3_BUTTONS_POLL_INTERVAL	20
-
-#ifdef CONFIG_MTD_PARTITIONS
-static struct mtd_partition wl341v3_partitions[] = {
-	{
-		.name	= "u-boot",
-		.offset	= 0,
-		.size	= 0x020000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "board-nvram",
-		.offset	= 0x020000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "u-boot-env",
-		.offset	= 0x030000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "kernel",
-		.offset	= 0x040000,
-		.size	= 0x0d0000,
-	}, {
-		.name	= "rootfs",
-		.offset	= 0x110000,
-		.size	= 0x2e0000,
-	}, {
-		.name	= "signature-eRcOmM",
-		.offset	= 0x3f0000,
-		.size	= 0x010000,
-	}, {
-		.name	= "firmware",
-		.offset	= 0x040000,
-		.size	= 0x3b0000,
-	}, {
-		.name	= "fullflash",
-		.offset	= 0x000000,
-		.size	= 0x400000,
-	}
-};
-#endif /* CONFIG_MTD_PARTITIONS */
-
-static struct physmap_flash_data wl341v3_flash_data = {
-#ifdef CONFIG_MTD_PARTITIONS
-	.nr_parts	= ARRAY_SIZE(wl341v3_partitions),
-	.parts		= wl341v3_partitions,
-#endif
-};
+#define WL341V3_KEYS_POLL_INTERVAL	20
+#define WL341V3_KEYS_DEBOUNCE_INTERVAL	(3 * WL341V3_KEYS_POLL_INTERVAL)
 
 static struct gpio_led wl341v3_leds_gpio[] __initdata = {
 	{
@@ -115,19 +65,19 @@ static struct gpio_led wl341v3_leds_gpio[] __initdata = {
 	}
 };
 
-static struct gpio_button wl341v3_gpio_buttons[] __initdata = {
+static struct gpio_keys_button wl341v3_gpio_buttons[] __initdata = {
 	{
 		.desc		= "reset",
 		.type		= EV_KEY,
 		.code		= KEY_RESTART,
-		.threshold	= 3,
+		.debounce_interval = WL341V3_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= WL341V3_GPIO_BUTTON_RESET,
 		.active_low	= 1,
 	}, {
 		.desc		= "wps",
 		.type		= EV_KEY,
 		.code		= KEY_WPS_BUTTON,
-		.threshold	= 3,
+		.debounce_interval = WL341V3_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= WL341V3_GPIO_BUTTON_WPS,
 		.active_low	= 1,
 	}
@@ -137,12 +87,13 @@ static void __init wl341v3_init(void)
 {
 	rt305x_gpio_init(RT305X_GPIO_MODE_GPIO << RT305X_GPIO_MODE_UART0_SHIFT);
 
-	rt305x_register_flash(0, &wl341v3_flash_data);
+	rt305x_register_flash(0);
+
 	rt305x_esw_data.vlan_config = RT305X_ESW_VLAN_CONFIG_WLLLL;
 	rt305x_register_ethernet();
 	ramips_register_gpio_leds(-1, ARRAY_SIZE(wl341v3_leds_gpio),
 				  wl341v3_leds_gpio);
-	ramips_register_gpio_buttons(-1, WL341V3_BUTTONS_POLL_INTERVAL,
+	ramips_register_gpio_buttons(-1, WL341V3_KEYS_POLL_INTERVAL,
 				     ARRAY_SIZE(wl341v3_gpio_buttons),
 				     wl341v3_gpio_buttons);
 	rt305x_register_wifi();

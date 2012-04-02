@@ -68,9 +68,19 @@ define MkuImageLzma
 	$(call MkuImage,lzma,,$(KDIR_TMP)/vmlinux-$(1).bin.lzma,$(KDIR_TMP)/vmlinux-$(1).uImage)
 endef
 
+define MkuImageLzma/initramfs
+	$(call PatchKernelLzma,$(1),$(2))
+	$(call MkuImage,lzma,,$(KDIR_TMP)/vmlinux-$(1).bin.lzma,$(call imgname,initramfs,$(1))-uImage.bin)
+endef
+
 define MkuImageGzip
 	$(call PatchKernelGzip,$(1),$(2))
 	$(call MkuImage,gzip,,$(KDIR_TMP)/vmlinux-$(1).bin.gz,$(KDIR_TMP)/vmlinux-$(1).uImage)
+endef
+
+define MkuImageGzip/initramfs
+	$(call PatchKernelGzip,$(1),$(2))
+	$(call MkuImage,gzip,,$(KDIR_TMP)/vmlinux-$(1).bin.gz,$(call imgname,initramfs,$(1))-uImage.bin)
 endef
 
 define MkuImageOKLI
@@ -145,14 +155,14 @@ define Image/Build/DIR825B1
 	if [ -e "$(call sysupname,$(1),$(2))" ]; then \
 		( \
 			dd if=$(call sysupname,$(1),$(2)); \
-			echo -n "01AP94-AR7161-RT-080619-00"; \
+			echo -n "$(4)"; \
 		) > $(call imgname,$(1),$(2))-backup-loader.bin; \
 		if [ `stat -c%s $(call sysupname,$(1),$(2))` -gt 4194304 ]; then \
 			echo "Warning: $(call sysupname,$(1),$(2)) is too big"; \
 		else \
 			( \
 				dd if=$(call sysupname,$(1),$(2)) bs=4096k conv=sync; \
-				echo -n "00AP94-AR7161-RT-080619-00"; \
+				echo -n "$(5)"; \
 			) > $(call factoryname,$(1),$(2)); \
 		fi; \
 	fi
@@ -177,8 +187,8 @@ define Image/Build/WZRHPG30XNH
 endef
 
 define Image/Build/WHRHPG300N
-	$(call MkuImageLzma,$(2),$(3) $($(4)))
-	$(call Sysupgrade/KRuImage,$(1),$(2),917504,2883584)
+	$(call MkuImageLzma,$(2),$(3) $(4))
+	$(call Sysupgrade/KRuImage,$(1),$(2),983040,2883584)
 	if [ -e "$(call sysupname,$(1),$(2))" ]; then \
 		( \
 			echo -n -e "# Airstation Public Fmt1\x00\x00\x00\x00\x00\x00\x00\x00"; \
@@ -195,7 +205,7 @@ define Image/Build/WHRHPG300N
 endef
 
 define Image/Build/Cameo
-	$(call MkuImageLzma,$(2),$(3) $($(4)))
+	$(call MkuImageLzma,$(2),$(3) $(4))
 	$(call Sysupgrade/KRuImage,$(1),$(2),$(5),$(6))
 	if [ -e "$(call sysupname,$(1),$(2))" ]; then \
 		( \
@@ -206,14 +216,22 @@ define Image/Build/Cameo
 	fi
 endef
 
-cameo913x_mtdlayout=mtdparts=spi0.0:128k(u-boot)ro,64k(config)ro,896k(kernel),2944k(rootfs),64k(art)ro,3840k@0x30000(firmware)
+cameo913x_mtdlayout=mtdparts=spi0.0:128k(u-boot)ro,64k(config)ro,960k(kernel),2880k(rootfs),64k(art)ro,3840k@0x30000(firmware)
 define Image/Build/Cameo913x
-	$(call Image/Build/Cameo,$(1),$(2),$(3),$(cameo913x_mtdlayout),917504,2949120,$(4))
+	$(call Image/Build/Cameo,$(1),$(2),$(3),$(cameo913x_mtdlayout),983040,2949120,$(4))
 endef
 
-cameo7240_mtdlayout=mtdparts=spi0.0:192k(u-boot)ro,64k(nvram)ro,896k(kernel),2816k(rootfs),64k(mac)ro,64k(art)ro,3712k@0x40000(firmware)
+define Image/Build/Cameo913x/initramfs
+	$(call MkuImageLzma/initramfs,$(2),$(3) $(cameo913x_mtdlayout))
+endef
+
+cameo7240_mtdlayout=mtdparts=spi0.0:192k(u-boot)ro,64k(nvram)ro,960k(kernel),2752k(rootfs),64k(mac)ro,64k(art)ro,3712k@0x40000(firmware)
 define Image/Build/Cameo7240
-	$(call Image/Build/Cameo,$(1),$(2),$(3),$(cameo7240_mtdlayout),917504,2818048,$(4))
+	$(call Image/Build/Cameo,$(1),$(2),$(3),$(cameo7240_mtdlayout),983040,2818048,$(4))
+endef
+
+define Image/Build/Cameo7240/initramfs
+	$(call MkuImageLzma/initramfs,$(2),$(3) $(cameo7240_mtdlayout))
 endef
 
 define Image/Build/Ath
@@ -227,23 +245,21 @@ define Image/Build/Ath
 endef
 
 define Image/Build/AthGzip
-	$(call MkuImageGzip,$(2),$(3) $($(4)))
+	$(call MkuImageGzip,$(2),$(3) $(4))
 	$(call Image/Build/Ath,$(1),$(2),$(3),$(4),$(5),$(6),$(7))
 endef
 
 define Image/Build/AthGzip/initramfs
-	$(call MkuImageLzma,$(2),$(3) $($(4)))
-	$(CP) $(KDIR_TMP)/vmlinux-$(2).uImage $(call imgname,$(1),$(2))-uImage.bin
+	$(call MkuImageGzip/initramfs,$(2),$(3) $(4))
 endef
 
 define Image/Build/AthLzma
-	$(call MkuImageLzma,$(2),$(3) $($(4)))
+	$(call MkuImageLzma,$(2),$(3) $(4))
 	$(call Image/Build/Ath,$(1),$(2),$(3),$(4),$(5),$(6),$(7))
 endef
 
 define Image/Build/AthLzma/initramfs
-	$(call MkuImageLzma,$(2),$(3) $($(4)))
-	$(CP) $(KDIR_TMP)/vmlinux-$(2).uImage $(call imgname,$(1),$(2))-uImage.bin
+	$(call MkuImageLzma/initramfs,$(2),$(3) $(4))
 endef
 
 define Image/Build/PB4X
@@ -273,7 +289,7 @@ define Image/Build/UBNTXM
 	$(call Sysupgrade/KRuImage,$(1),$(2),1048576,6684672)
 	dd if=$(KDIR_TMP)/vmlinux-$(2).uImage of=$(KDIR_TMP)/vmlinux-$(2).uImage.bin bs=1024k conv=sync
 	-$(STAGING_DIR_HOST)/bin/mkfwimage \
-		-B $(4) -v $(5).$(6).OpenWrt.$(REVISION) \
+		-B $(4) -v $(5).$(6).v6.0.0-OpenWrt-$(REVISION) \
 		-k $(KDIR_TMP)/vmlinux-$(2).uImage.bin \
 		-r $(BIN_DIR)/$(IMG_PREFIX)-root.$(1) \
 		-o $(call factoryname,$(1),$(2))
@@ -299,6 +315,7 @@ define Image/Build/Planex/loader
 endef
 
 define Image/Build/Planex
+	[ -e "$(KDIR)/loader-$(2).gz" ]
 	$(call MkuImage,gzip,,$(KDIR)/loader-$(2).gz,$(KDIR_TMP)/vmlinux-$(2).uImage)
 	$(call MkuImageOKLI,$(2))
 	( \
@@ -333,11 +350,16 @@ define Image/Build/ALFA
 	fi
 endef
 
+define Image/Build/ALFA/initramfs
+	$(call MkuImageLzma/initramfs,$(2),$(3))
+endef
+
 define Image/Build/TPLINKOLD/loader
 	$(call Image/BuildLoaderAlone,$(1),gz,$(2),0x22000,0)
 endef
 
 define Image/Build/TPLINKOLD
+	[ -e "$(KDIR)/loader-$(2).gz" ]
 	$(call MkuImageOKLI,$(2))
 	( \
 		dd if=$(KDIR)/loader-$(2).gz bs=7680 count=1 conv=sync; \
@@ -368,6 +390,7 @@ define Image/Build/TPLINK/loader
 endef
 
 define Image/Build/TPLINK
+	[ -e "$(KDIR)/loader-$(2).gz" ]
 	$(call MkuImageOKLI,$(2))
 	( \
 		dd if=$(KDIR)/loader-$(2).gz bs=7680 count=1 conv=sync; \
@@ -508,7 +531,7 @@ define Image/Build/Netgear
 endef
 
 define Image/Build/Netgear/initramfs
-	$(call MkuImageLzma,$(2),$(3) $($(4)))
+	$(call MkuImageLzma,$(2),$(3) $(4))
 	$(STAGING_DIR_HOST)/bin/wndr3700 \
 		$(KDIR_TMP)/vmlinux-$(2).uImage \
 		$(call imgname,$(1),$(2))-uImage.bin \
@@ -555,6 +578,10 @@ define Image/Build/Zcomax
 			-r $(BIN_DIR)/$(IMG_PREFIX)-root.$(1) \
 			-o $(call imgname,$(1),$(2))-factory.img; \
 	fi
+endef
+
+define Image/Build/Zcomax/initramfs
+	$(call MkuImageLzma/initramfs,$(2),$(3))
 endef
 
 define Image/Build/Template/initramfs/initramfs
@@ -621,13 +648,13 @@ endef
 alfa_ap96_cmdline=board=ALFA-AP96 console=ttyS0,115200
 alfa_ap96_mtdlayout=mtdparts=spi0.0:256k(u-boot)ro,256k(u-boot-env)ro,13312k(rootfs),2048k(kernel),512k(caldata)ro,15360k@0x80000(firmware)
 define Image/Build/Profile/ALFAAP96
-	$(call Image/Build/Template/$(fs_128k)/$(1),AthLzma,alfa-ap96,$(alfa_ap96_cmdline),alfa_ap96_mtdlayout,2097152,13631488,RKuImage)
+	$(call Image/Build/Template/$(fs_128k)/$(1),AthLzma,alfa-ap96,$(alfa_ap96_cmdline),$(alfa_ap96_mtdlayout),2097152,13631488,RKuImage)
 endef
 
 ap113_mtd_layout=64k(u-boot),3008k(rootfs),896k(uImage),64k(NVRAM),64k(ART),3904k@0x10000(firmware)
 ap113_cmdline=board=AP113 console=ttyS0,115200
 define Image/Build/Profile/AP113
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap113,$(ap113_cmdline),ap113_mtd_layout,917504,3080192,RK)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap113,$(ap113_cmdline),$(ap113_mtd_layout),917504,3080192,RK)
 endef
 
 ap121_mtdlayout_2M=mtdparts=spi0.0:64k(u-boot)ro,1216k(rootfs),704k(kernel),64k(art)ro,1920k@0x10000(firmware)
@@ -635,13 +662,13 @@ ap121_mtdlayout_4M=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,2752k(rootfs
 
 ap121_cmdline=board=AP121 console=ttyATH0,115200
 define Image/Build/Profile/AP121
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap121-2M,$(ap121_cmdline),ap121_mtdlayout_2M,720896,1245184,RKuImage)
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap121-4M,$(ap121_cmdline),ap121_mtdlayout_4M,917504,2818048,RKuImage)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap121-2M,$(ap121_cmdline),$(ap121_mtdlayout_2M),720896,1245184,RKuImage)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap121-4M,$(ap121_cmdline),$(ap121_mtdlayout_4M),917504,2818048,RKuImage)
 endef
 
 ap121_mini_cmdline=board=AP121-MINI console=ttyATH0,115200
 define Image/Build/Profile/AP121MINI
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap121-mini,$(ap121_mini_cmdline),ap121_mtdlayout_4M,917504,2818048,RKuImage)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap121-mini,$(ap121_mini_cmdline),$(ap121_mtdlayout_4M),917504,2818048,RKuImage)
 endef
 
 ap81_cmdline=board=AP81 console=ttyS0,115200
@@ -655,14 +682,15 @@ define Image/Build/Profile/AP83
 endef
 
 ap96_cmdline=board=AP96 console=ttyS0,115200
+ap96_mtdlayout=mtdparts=spi0.0:192k(u-boot)ro,64k(u-boot-env)ro,6144k(rootfs),1728k(kernel),64k(art)ro,7872k@0x40000(firmware)
 define Image/Build/Profile/AP96
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthGzip,ap96,$(ap96_cmdline),ap96_mtdlayout,1769472,6291456,RKuImage)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthGzip,ap96,$(ap96_cmdline),$(ap96_mtdlayout),1769472,6291456,RKuImage)
 endef
 
 db120_cmdline=board=DB120 console=ttyS0,115200
 db120_mtdlayout=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,6336k(rootfs),1408k(kernel),64k(nvram),64k(art)ro,7744k@0x50000(firmware)
 define Image/Build/Profile/DB120
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,db120,$(db120_cmdline),db120_mtdlayout,1441792,6488064,RKuImage)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,db120,$(db120_cmdline),$(db120_mtdlayout),1441792,6488064,RKuImage)
 endef
 
 pb42_cmdline=board=PB42 console=ttyS0,115200
@@ -676,8 +704,9 @@ define Image/Build/Profile/PB44
 endef
 
 pb92_cmdline=board=PB92 console=ttyS0,115200
+pb92_mtdlayout=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,2752k(rootfs),896k(kernel),64k(nvram),64k(art)ro,3648k@0x50000(firmware)
 define Image/Build/Profile/PB92
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,pb92,$(pb92_cmdline),,917504,2818048,KRuImage)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,pb92,$(pb92_cmdline),$(pb92_mtdlayout),917504,2818048,KRuImage)
 endef
 
 wp543_cmdline=console=ttyS0,115200
@@ -698,6 +727,11 @@ define Image/Build/Profile/DIR600A1
 	$(call Image/Build/Template/$(fs_64k)/$(1),Cameo7240,dir-600-a1,$(dir600a1_cmdline),"AP91-AR7240-RT-090223-00")
 endef
 
+dir601a1_cmdline=board=DIR-600-A1 console=ttyS0,115200
+define Image/Build/Profile/DIR601A1
+	$(call Image/Build/Template/$(fs_64k)/$(1),Cameo7240,dir-601-a1,$(dir600a1_cmdline),"AP91-AR7240-RT-090223-02")
+endef
+
 dir615e4_cmdline=board=DIR-615-E4 console=ttyS0,115200
 define Image/Build/Profile/DIR615E4
 	$(call Image/Build/Template/$(fs_64k)/$(1),Cameo7240,dir-615-e4,$(dir615e4_cmdline),"AP99-AR7240-RT-091105-05")
@@ -716,6 +750,11 @@ endef
 ja76pf_cmdline=board=JA76PF console=ttyS0,115200
 define Image/Build/Profile/JA76PF
 	$(call Image/Build/Template/$(fs_64k)/$(1),PB4X,ja76pf,$(ja76pf_cmdline))
+endef
+
+ja76pf2_cmdline=board=JA76PF2 console=ttyS0,115200
+define Image/Build/Profile/JA76PF2
+	$(call Image/Build/Template/$(fs_64k)/$(1),PB4X,ja76pf2,$(ja76pf2_cmdline))
 endef
 
 jwap003_cmdline=board=JWAP003 console=ttyS0,115200
@@ -776,22 +815,22 @@ endef
 
 ubntbulletm_cmdline=board=UBNT-BM console=ttyS0,115200
 define Image/Build/Profile/UBNTBULLETM
-	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-bullet-m,$(ubntbulletm_cmdline),XM,UBNTXM,ar7240)
+	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-bullet-m,$(ubntbulletm_cmdline),XM,XM,ar7240)
 endef
 
 ubntrocketm_cmdline=board=UBNT-RM console=ttyS0,115200
 define Image/Build/Profile/UBNTROCKETM
-	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-rocket-m,$(ubntrocketm_cmdline),XM,UBNTXM,ar7240)
+	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-rocket-m,$(ubntrocketm_cmdline),XM,XM,ar7240)
 endef
 
 ubntnanom_cmdline=board=UBNT-NM console=ttyS0,115200
 define Image/Build/Profile/UBNTNANOM
-	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-nano-m,$(ubntnanom_cmdline),XM,UBNTXM,ar7240)
+	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-nano-m,$(ubntnanom_cmdline),XM,XM,ar7240)
 endef
 
 ubntunifi_cmdline=board=UBNT-UF console=ttyS0,115200
 define Image/Build/Profile/UBNTUNIFI
-	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-unifi,$(ubntunifi_cmdline),XM,UBNTXM,ar7240)
+	$(call Image/Build/Template/$(fs_64k)/$(1),UBNTXM,ubnt-unifi,$(ubntunifi_cmdline),XM,XM,ar7240)
 endef
 
 define Image/Build/Profile/UBNT
@@ -892,6 +931,11 @@ define Image/Build/Profile/TLWR841
 	$(call Image/Build/Template/$(fs_64kraw)/$(1),TPLINK,tl-wr841nd-v7,$(tlwr841v7_cmdline),0x08410007,1,4M)
 endef
 
+tlwr842_cmdline=board=TL-MR3420 console=ttyS0,115200
+define Image/Build/Profile/TLWR842
+	$(call Image/Build/Template/$(fs_64kraw)/$(1),TPLINK,tl-wr842n-v1,$(tlwr842_cmdline),0x08420001,1,8M)
+endef
+
 tlwr941v2_cmdline=board=TL-WR941ND console=ttyS0,115200
 tlwr941v4_cmdline=board=TL-WR741ND console=ttyS0,115200
 define Image/Build/Profile/TLWR941
@@ -928,7 +972,12 @@ endef
 
 dir825b1_cmdline=board=DIR-825-B1 console=ttyS0,115200
 define Image/Build/Profile/DIR825B1
-	$(call Image/Build/Template/$(fs_64k)/$(1),DIR825B1,dir-825-b1,$(dir825b1_cmdline))
+	$(call Image/Build/Template/$(fs_64k)/$(1),DIR825B1,dir-825-b1,$(dir825b1_cmdline),01AP94-AR7161-RT-080619-00,00AP94-AR7161-RT-080619-00)
+endef
+
+tew673gru_cmdline=board=TEW-673GRU console=ttyS0,115200
+define Image/Build/Profile/TEW673GRU
+	$(call Image/Build/Template/$(fs_64k)/$(1),DIR825B1,tew-673gru,$(tew673gru_cmdline),01AP94-AR7161-RT-080619-01,00AP94-AR7161-RT-080619-01)
 endef
 
 wrt160nl_cmdline=board=WRT160NL console=ttyS0,115200
@@ -938,18 +987,18 @@ endef
 
 whrg301n_cmdline=board=WHR-G301N console=ttyS0,115200
 define Image/Build/Profile/WHRG301N
-	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,whr-g301n,$(whrg301n_cmdline),whrhpg300n_mtdlayout,WHR-G301N)
+	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,whr-g301n,$(whrg301n_cmdline),$(whrhpg300n_mtdlayout),WHR-G301N)
 endef
 
 whrhpg300n_cmdline=board=WHR-HP-G300N console=ttyS0,115200
-whrhpg300n_mtdlayout=mtdparts=spi0.0:248k(u-boot)ro,8k(u-boot-env)ro,896k(kernel),2816k(rootfs),64k(user_property),64k(art)ro,3712k@0x40000(firmware)
+whrhpg300n_mtdlayout=mtdparts=spi0.0:248k(u-boot)ro,8k(u-boot-env)ro,960k(kernel),2816k(rootfs),64k(art)ro,3712k@0x40000(firmware)
 define Image/Build/Profile/WHRHPG300N
-	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,whr-hp-g300n,$(whrhpg300n_cmdline),whrhpg300n_mtdlayout,WHR-HP-G300N)
+	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,whr-hp-g300n,$(whrhpg300n_cmdline),$(whrhpg300n_mtdlayout),WHR-HP-G300N)
 endef
 
 whrhpgn_cmdline=board=WHR-HP-GN console=ttyS0,115200
 define Image/Build/Profile/WHRHPGN
-	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,whr-hp-gn,$(whrhpgn_cmdline),whrhpg300n_mtdlayout,WHR-HP-GN)
+	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,whr-hp-gn,$(whrhpgn_cmdline),$(whrhpg300n_mtdlayout),WHR-HP-GN)
 endef
 
 wzrhpg300nh_cmdline=board=WZR-HP-G300NH console=ttyS0,115200
@@ -972,12 +1021,13 @@ define Image/Build/Profile/WZRHPG450H
 	$(call Image/Build/Template/$(fs_64k)/$(1),WZRHPG30XNH,wzr-hp-g450h,$(wzrhpg450h_cmdline),WZR-HP-AG450H)
 endef
 
-zcn1523h28_cmdline=board=ZCN-1523H-2 console=ttyS0,115200
+zcn1523h_mtdlayout=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,6208k(rootfs),1472k(kernel),64k(configure)ro,64k(mfg)ro,64k(art)ro,7680k@0x50000(firmware)
+zcn1523h28_cmdline=board=ZCN-1523H-2 console=ttyS0,115200 $(zcn1523h_mtdlayout)
 define Image/Build/Profile/ZCN1523H28
 	$(call Image/Build/Template/$(fs_64k)/$(1),Zcomax,zcn-1523h-2-8,$(zcn1523h28_cmdline))
 endef
 
-zcn1523h516_cmdline=board=ZCN-1523H-5 console=ttyS0,115200
+zcn1523h516_cmdline=board=ZCN-1523H-5 console=ttyS0,115200 $(zcn1523h_mtdlayout)
 define Image/Build/Profile/ZCN1523H516
 	$(call Image/Build/Template/$(fs_64k)/$(1),Zcomax,zcn-1523h-5-16,$(zcn1523h516_cmdline))
 endef
@@ -999,6 +1049,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/A02RBW300N,$(1))
 	$(call Image/Build/Profile/DB120,$(1))
 	$(call Image/Build/Profile/DIR600A1,$(1))
+	$(call Image/Build/Profile/DIR601A1,$(1))
 	$(call Image/Build/Profile/DIR615C1,$(1))
 	$(call Image/Build/Profile/DIR615E4,$(1))
 	$(call Image/Build/Profile/DIR825B1,$(1))
@@ -1006,6 +1057,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/FR54RTR,$(1))
 	$(call Image/Build/Profile/HORNETUB,$(1))
 	$(call Image/Build/Profile/JA76PF,$(1))
+	$(call Image/Build/Profile/JA76PF2,$(1))
 	$(call Image/Build/Profile/JWAP003,$(1))
 	$(call Image/Build/Profile/MZKW04NU,$(1))
 	$(call Image/Build/Profile/MZKW300NH,$(1))
@@ -1017,6 +1069,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/RW2458N,$(1))
 	$(call Image/Build/Profile/TEW632BRP,$(1))
 	$(call Image/Build/Profile/TEW652BRP,$(1))
+	$(call Image/Build/Profile/TEW673GRU,$(1))
 	$(call Image/Build/Profile/TLMR11U,$(1))
 	$(call Image/Build/Profile/TLMR3020,$(1))
 	$(call Image/Build/Profile/TLMR3220,$(1))
@@ -1028,6 +1081,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/TLWR741,$(1))
 	$(call Image/Build/Profile/TLWR743,$(1))
 	$(call Image/Build/Profile/TLWR841,$(1))
+	$(call Image/Build/Profile/TLWR842,$(1))
 	$(call Image/Build/Profile/TLWR941,$(1))
 	$(call Image/Build/Profile/TLWR1043,$(1))
 	$(call Image/Build/Profile/TLWR2543,$(1))

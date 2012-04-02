@@ -12,9 +12,6 @@
 #include <linux/platform_device.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
-#include <linux/mtd/mtd.h>
-#include <linux/mtd/partitions.h>
-#include <linux/mtd/physmap.h>
 
 #include <asm/mach-ralink/machine.h>
 #include <asm/mach-ralink/dev-gpio-buttons.h>
@@ -28,46 +25,11 @@
 #define ALL0256N_GPIO_LED_RSSI_LOW 14
 #define ALL0256N_GPIO_LED_RSSI_MED 12
 #define ALL0256N_GPIO_LED_RSSI_HIGH 13
-#define ALL0256N_BUTTONS_POLL_INTERVAL 20
-
-#ifdef CONFIG_MTD_PARTITIONS
-static struct mtd_partition all0256n_partitions[] = {
-	{
-		.name	= "u-boot",
-		.offset	= 0,
-		.size	= 0x030000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "u-boot-env",
-		.offset	= 0x030000,
-		.size	= 0x010000,
-	}, {
-		.name	= "factory",
-		.offset	= 0x040000,
-		.size	= 0x010000,
-	}, {
-		.name	= "kernel",
-		.offset	= 0x050000,
-		.size	= 0x0D0000,
-	}, {
-		.name	= "rootfs",
-		.offset	= 0x120000,
-		.size	= 0x2E0000,
-	}, {
-		.name	= "firmware",
-		.offset	= 0x050000,
-		.size	= 0x3B0000,
-	}
-};
-#endif /* CONFIG_MTD_PARTITIONS */
-
+#define ALL0256N_KEYS_POLL_INTERVAL 20
+#define ALL0256N_KEYS_DEBOUNCE_INTERVAL	(3 * ALL0256N_KEYS_POLL_INTERVAL)
 
 const struct flash_platform_data all0256n_flash = {
 	.type		= "mx25l3205d",
-#ifdef CONFIG_MTD_PARTITIONS
-	.parts		= all0256n_partitions,
-	.nr_parts	= ARRAY_SIZE(all0256n_partitions),
-#endif
 };
 
 struct spi_board_info all0256n_spi_slave_info[] __initdata = {
@@ -81,12 +43,12 @@ struct spi_board_info all0256n_spi_slave_info[] __initdata = {
 	},
 };
 
-static struct gpio_button all0256n_gpio_buttons[] __initdata = {
+static struct gpio_keys_button all0256n_gpio_buttons[] __initdata = {
 	{
 		.desc		= "reset",
 		.type		= EV_KEY,
 		.code		= KEY_RESTART,
-		.threshold	= 3,
+		.debounce_interval = ALL0256N_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= ALL0256N_GPIO_BUTTON_RESET,
 		.active_low	= 1,
 	}
@@ -117,7 +79,7 @@ static void __init all0256n_init(void)
 	rt305x_register_ethernet();
 	ramips_register_gpio_leds(-1, ARRAY_SIZE(all0256n_leds_gpio),
 				  all0256n_leds_gpio);
-	ramips_register_gpio_buttons(-1, ALL0256N_BUTTONS_POLL_INTERVAL,
+	ramips_register_gpio_buttons(-1, ALL0256N_KEYS_POLL_INTERVAL,
 				     ARRAY_SIZE(all0256n_gpio_buttons),
 				     all0256n_gpio_buttons);
 	rt305x_register_wifi();

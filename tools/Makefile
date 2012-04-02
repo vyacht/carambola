@@ -47,7 +47,7 @@ $(curdir)/mpc/compile := $(curdir)/mpfr/install $(curdir)/gmp/install
 $(curdir)/mpfr/compile := $(curdir)/gmp/install
 $(curdir)/ppl/compile := $(curdir)/gmp/install
 $(curdir)/cloog/compile := $(curdir)/ppl/install
-$(curdir)/mtd-utils/compile := $(curdir)/e2fsprogs/install
+$(curdir)/mtd-utils/compile := $(curdir)/e2fsprogs/install $(curdir)/xz/install
 $(curdir)/mkimage/compile := $(curdir)/sed/install
 $(curdir)/qemu/compile := $(curdir)/e2fsprogs/install
 $(curdir)/upslug2/compile := $(curdir)/automake/install
@@ -101,12 +101,23 @@ $(STAGING_DIR_HOST)/bin/$(1): $(STAGING_DIR)/.prepared
 endef
 endif
 
+$(STAGING_DIR_HOST)/bin/stat: $(STAGING_DIR)/.prepared
+	@rm -f $@
+	@if stat --version > /dev/null 2>&1; then \
+		ln -s `which stat` $@; \
+	elif gstat --version > /dev/null 2>&1; then \
+		ln -s `which gstat` $@; \
+	else \
+		echo "GNU stat not found"; \
+		false; \
+	fi
+
 $(eval $(call PrepareCommand,find,gfind find))
 $(eval $(call PrepareCommand,md5sum,md5sum $(SCRIPT_DIR)/md5sum))
 $(eval $(call PrepareCommand,cp,gcp cp))
-$(eval $(call PrepareCommand,stat,gstat stat))
+$(eval $(call PrepareCommand,seq,gseq seq))
 
-$(curdir)/cmddeps = $(patsubst %,$(STAGING_DIR_HOST)/bin/%,find md5sum cp stat)
+$(curdir)/cmddeps = $(patsubst %,$(STAGING_DIR_HOST)/bin/%,find md5sum cp stat seq)
 $(curdir)//prepare = $(STAGING_DIR)/.prepared $(STAGING_DIR_HOST)/.prepared $($(curdir)/cmddeps)
 $(curdir)//compile = $(STAGING_DIR)/.prepared $(STAGING_DIR_HOST)/.prepared $($(curdir)/cmddeps)
 

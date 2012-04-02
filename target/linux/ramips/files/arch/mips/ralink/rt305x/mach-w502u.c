@@ -10,9 +10,6 @@
 
 #include <linux/init.h>
 #include <linux/platform_device.h>
-#include <linux/mtd/mtd.h>
-#include <linux/mtd/partitions.h>
-#include <linux/mtd/physmap.h>
 
 #include <asm/mach-ralink/machine.h>
 #include <asm/mach-ralink/dev-gpio-buttons.h>
@@ -28,52 +25,8 @@
 #define W502U_GPIO_BUTTON_WPS		0
 #define W502U_GPIO_BUTTON_RESET		10
 
-#define W502U_BUTTONS_POLL_INTERVAL	20
-
-#ifdef CONFIG_MTD_PARTITIONS
-static struct mtd_partition w502u_partitions[] = {
-	{
-		.name	= "u-boot",
-		.offset	= 0,
-		.size	= 0x030000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "config",
-		.offset	= 0x030000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "factory",
-		.offset	= 0x040000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "kernel",
-		.offset	= 0x050000,
-		.size	= 0x0d0000,
-	}, {
-		.name	= "rootfs",
-		.offset	= 0x120000,
-		.size	= 0x6d0000,
-	}, {
-		.name	= "data3g",
-		.offset	= 0x7f0000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "firmware",
-		.offset	= 0x050000,
-		.size	= 0x7a0000,
-	}
-};
-#endif /* CONFIG_MTD_PARTITIONS */
-
-static struct physmap_flash_data w502u_flash_data = {
-#ifdef CONFIG_MTD_PARTITIONS
-	.nr_parts	= ARRAY_SIZE(w502u_partitions),
-	.parts		= w502u_partitions,
-#endif
-};
+#define W502U_KEYS_POLL_INTERVAL	20
+#define W502U_KEYS_DEBOUNCE_INTERVAL	(3 * W502U_KEYS_POLL_INTERVAL)
 
 static struct gpio_led w502u_leds_gpio[] __initdata = {
 	{
@@ -88,12 +41,12 @@ static struct gpio_led w502u_leds_gpio[] __initdata = {
 	},
 };
 
-static struct gpio_button w502u_gpio_buttons[] __initdata = {
+static struct gpio_keys_button w502u_gpio_buttons[] __initdata = {
 	{
 		.desc		= "Reset button",
 		.type		= EV_KEY,
 		.code		= KEY_RESTART,
-		.threshold	= 3,
+		.debounce_interval = W502U_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= W502U_GPIO_BUTTON_RESET,
 		.active_low	= 1,
 	},
@@ -101,7 +54,7 @@ static struct gpio_button w502u_gpio_buttons[] __initdata = {
 		.desc		= "WPS button",
 		.type		= EV_KEY,
 		.code		= KEY_WPS_BUTTON,
-		.threshold	= 3,
+		.debounce_interval = W502U_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= W502U_GPIO_BUTTON_WPS,
 		.active_low	= 1,
 	},
@@ -112,12 +65,13 @@ static void __init w502u_init(void)
 	rt305x_gpio_init((RT305X_GPIO_MODE_GPIO <<
 			  RT305X_GPIO_MODE_UART0_SHIFT));
 
-	rt305x_register_flash(0, &w502u_flash_data);
+	rt305x_register_flash(0);
+
 	rt305x_esw_data.vlan_config = RT305X_ESW_VLAN_CONFIG_WLLLL;
 	rt305x_register_ethernet();
 	ramips_register_gpio_leds(-1, ARRAY_SIZE(w502u_leds_gpio),
 				  w502u_leds_gpio);
-	ramips_register_gpio_buttons(-1, W502U_BUTTONS_POLL_INTERVAL,
+	ramips_register_gpio_buttons(-1, W502U_KEYS_POLL_INTERVAL,
 				     ARRAY_SIZE(w502u_gpio_buttons),
 				     w502u_gpio_buttons);
 	rt305x_register_wifi();

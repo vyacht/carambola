@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2011 OpenWrt.org
+# Copyright (C) 2006-2012 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -99,8 +99,9 @@ define KernelPackage/usb-ohci
   KCONFIG:= \
 	CONFIG_USB_OHCI \
 	CONFIG_USB_OHCI_HCD \
-	CONFIG_USB_OHCI_AR71XX=y \
 	CONFIG_USB_OHCI_ATH79=y \
+	CONFIG_USB_OHCI_BCM63XX=y \
+	CONFIG_USB_OHCI_RT3883=y \
 	CONFIG_USB_OCTEON_OHCI=y
   FILES:=$(LINUX_DIR)/drivers/usb/host/ohci-hcd.ko
   AUTOLOAD:=$(call AutoLoad,50,ohci-hcd,1)
@@ -208,8 +209,9 @@ define KernelPackage/usb2
   TITLE:=Support for USB2 controllers
   DEPENDS:=+TARGET_brcm47xx:kmod-usb-brcm47xx
   KCONFIG:=CONFIG_USB_EHCI_HCD \
-    CONFIG_USB_EHCI_AR71XX=y \
     CONFIG_USB_EHCI_ATH79=y \
+    CONFIG_USB_EHCI_BCM63XX=y \
+    CONFIG_USB_EHCI_RT3883=y \
     CONFIG_USB_OCTEON_EHCI=y \
     CONFIG_USB_EHCI_FSL=n
   FILES:=$(LINUX_DIR)/drivers/usb/host/ehci-hcd.ko
@@ -602,6 +604,21 @@ endef
 $(eval $(call KernelPackage,usb-serial-option))
 
 
+define KernelPackage/usb-serial-qualcomm
+  TITLE:=Support for Qualcomm USB serial
+  KCONFIG:=CONFIG_USB_SERIAL_QUALCOMM
+  FILES:=$(LINUX_DIR)/drivers/usb/serial/qcserial.ko
+  AUTOLOAD:=$(call AutoLoad,65,qcserial)
+  $(call AddDepends/usb-serial)
+endef
+
+define KernelPackage/usb-serial-qualcomm/description
+ Kernel support for Qualcomm USB Serial devices (Gobi)
+endef
+
+$(eval $(call KernelPackage,usb-serial-qualcomm))
+
+
 define KernelPackage/usb-storage
   TITLE:=USB Storage support
   DEPENDS:= +kmod-scsi-core
@@ -893,6 +910,21 @@ define KernelPackage/usb-net-sierrawireless/description
 endef
 
 $(eval $(call KernelPackage,usb-net-sierrawireless))
+
+
+define KernelPackage/usb-net-ipheth
+  TITLE:=Apple iPhone USB Ethernet driver
+  KCONFIG:=CONFIG_USB_IPHETH
+  FILES:=$(LINUX_DIR)/drivers/net/usb/ipheth.ko
+  AUTOLOAD:=$(call AutoLoad,64,ipheth)
+  $(call AddDepends/usb-net)
+endef
+
+define KernelPackage/usb-net-ipheth/description
+ Kernel support for Apple iPhone USB Ethernet driver
+endef
+
+$(eval $(call KernelPackage,usb-net-ipheth))
 
 
 define KernelPackage/usb-hid

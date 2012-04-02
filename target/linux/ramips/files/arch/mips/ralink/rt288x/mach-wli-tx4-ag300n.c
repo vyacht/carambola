@@ -11,9 +11,6 @@
 #include <linux/init.h>
 #include <linux/ethtool.h>
 #include <linux/platform_device.h>
-#include <linux/mtd/mtd.h>
-#include <linux/mtd/partitions.h>
-#include <linux/mtd/physmap.h>
 
 #include <asm/mach-ralink/machine.h>
 #include <asm/mach-ralink/dev-gpio-buttons.h>
@@ -32,57 +29,8 @@
 #define WLI_TX4_AG300N_GPIO_BUTTON_BW_SWITCH	8
 #define WLI_TX4_AG300N_GPIO_BUTTON_RESET	9
 
-#define WLI_TX4_AG300N_BUTTONS_POLL_INTERVAL	20
-
-#ifdef CONFIG_MTD_PARTITIONS
-static struct mtd_partition wli_tx4_ag300n_partitions[] = {
-	{
-		.name	= "u-boot",
-		.offset	= 0,
-		.size	= 0x030000,
-		.mask_flags = MTD_WRITEABLE,
-	},
-	{
-		.name	= "u-boot-env",
-		.offset	= 0x030000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	},
-	{
-		.name	= "factory",
-		.offset	= 0x040000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	},
-	{
-		.name	= "kernel",
-		.offset	= 0x050000,
-		.size	= 0x0d0000,
-	},
-	{
-		.name	= "rootfs",
-		.offset	= 0x120000,
-		.size	= 0x2d0000,
-	},
-	{
-		.name	= "user",
-		.offset	= 0x3f0000,
-		.size	= 0x010000,
-	},
-	{
-		.name	= "firmware",
-		.offset	= 0x050000,
-		.size	= 0x3a0000,
-	},
-};
-#endif /* CONFIG_MTD_PARTITIONS */
-
-static struct physmap_flash_data wli_tx4_ag300n_flash_data = {
-#ifdef CONFIG_MTD_PARTITIONS
-	.nr_parts	= ARRAY_SIZE(wli_tx4_ag300n_partitions),
-	.parts		= wli_tx4_ag300n_partitions,
-#endif
-};
+#define WLI_TX4_AG300N_KEYS_POLL_INTERVAL	20
+#define WLI_TX4_AG300N_KEYS_DEBOUNCE_INTERVAL	(3 * WLI_TX4_AG300N_KEYS_POLL_INTERVAL)
 
 static struct gpio_led wli_tx4_ag300n_leds_gpio[] __initdata = {
 	{
@@ -102,12 +50,12 @@ static struct gpio_led wli_tx4_ag300n_leds_gpio[] __initdata = {
 	},
 };
 
-static struct gpio_button wli_tx4_ag300n_gpio_buttons[] __initdata = {
+static struct gpio_keys_button wli_tx4_ag300n_gpio_buttons[] __initdata = {
 	{
 		.desc		= "Reset button",
 		.type		= EV_KEY,
 		.code		= KEY_RESTART,
-		.threshold	= 3,
+		.debounce_interval = WLI_TX4_AG300N_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= WLI_TX4_AG300N_GPIO_BUTTON_RESET,
 		.active_low	= 1,
 	},
@@ -115,7 +63,7 @@ static struct gpio_button wli_tx4_ag300n_gpio_buttons[] __initdata = {
 		.desc		= "AOSS button",
 		.type		= EV_KEY,
 		.code		= KEY_WPS_BUTTON,
-		.threshold	= 3,
+		.debounce_interval = WLI_TX4_AG300N_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= WLI_TX4_AG300N_GPIO_BUTTON_AOSS,
 		.active_low	= 1,
 	},
@@ -123,7 +71,7 @@ static struct gpio_button wli_tx4_ag300n_gpio_buttons[] __initdata = {
 		.desc		= "Bandwidth switch",
 		.type		= EV_KEY,
 		.code		= BTN_0,
-		.threshold	= 3,
+		.debounce_interval = WLI_TX4_AG300N_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= WLI_TX4_AG300N_GPIO_BUTTON_BW_SWITCH,
 		.active_low	= 0,
 	},
@@ -135,11 +83,11 @@ static void __init wli_tx4_ag300n_init(void)
 
 	ramips_register_gpio_leds(-1, ARRAY_SIZE(wli_tx4_ag300n_leds_gpio),
 				  wli_tx4_ag300n_leds_gpio);
-	ramips_register_gpio_buttons(-1, WLI_TX4_AG300N_BUTTONS_POLL_INTERVAL,
+	ramips_register_gpio_buttons(-1, WLI_TX4_AG300N_KEYS_POLL_INTERVAL,
 				     ARRAY_SIZE(wli_tx4_ag300n_gpio_buttons),
 				     wli_tx4_ag300n_gpio_buttons);
 
-	rt288x_register_flash(0, &wli_tx4_ag300n_flash_data);
+	rt288x_register_flash(0);
 	rt288x_register_wifi();
 	rt288x_register_wdt();
 

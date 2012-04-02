@@ -31,8 +31,8 @@
 #define WL351_GPIO_BUTTON_RESET	10
 #define WL351_GPIO_BUTTON_WPS	0
 
-#define WL351_BUTTONS_POLL_INTERVAL	20
-
+#define WL351_KEYS_POLL_INTERVAL	20
+#define WL351_KEYS_DEBOUNCE_INTERVAL	(3 * WL351_KEYS_POLL_INTERVAL)
 
 static struct gpio_led wl351_leds_gpio[] __initdata = {
 	{
@@ -51,69 +51,23 @@ static struct gpio_led wl351_leds_gpio[] __initdata = {
 };
 
 
-static struct gpio_button wl351_gpio_buttons[] __initdata = {
+static struct gpio_keys_button wl351_gpio_buttons[] __initdata = {
 	{
 		.desc		= "reset",
 		.type		= EV_KEY,
 		.code		= KEY_RESTART,
-		.threshold	= 3,
+		.debounce_interval = WL351_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= WL351_GPIO_BUTTON_RESET,
 		.active_low	= 1,
 	}, {
 		.desc		= "wps",
 		.type		= EV_KEY,
 		.code		= KEY_WPS_BUTTON,
-		.threshold	= 3,
+		.debounce_interval = WL351_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= WL351_GPIO_BUTTON_WPS,
 		.active_low	= 1,
 	}
 };
-
-
-#ifdef CONFIG_MTD_PARTITIONS
-static struct mtd_partition wl351_partitions[] = {
-	{
-		.name	= "u-boot",
-		.offset	= 0,
-		.size	= 0x030000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "u-boot-env",
-		.offset	= 0x030000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "factory",
-		.offset	= 0x040000,
-		.size	= 0x010000,
-		.mask_flags = MTD_WRITEABLE,
-	}, {
-		.name	= "kernel",
-		.offset	= 0x050000,
-		.size	= 0x110000,
-	}, {
-		.name	= "rootfs",
-		.offset	= 0x160000,
-		.size	= 0x230000,
-	}, {
-		.name	= "user (jffs2)",
-		.offset	= 0x3F0000,
-		.size	= 0x010000,
-	}, {
-		.name	= "firmware",
-		.offset	= 0x050000,
-		.size	= 0x3a0000,
-	}
-};
-#endif /* CONFIG_MTD_PARTITIONS */
-
-static struct physmap_flash_data wl351_flash_data = {
-#ifdef CONFIG_MTD_PARTITIONS
-	.nr_parts	= ARRAY_SIZE(wl351_partitions),
-	.parts		= wl351_partitions,
-#endif
-};
-
 
 static struct rtl8366_platform_data wl351_switch_data = {
 	.gpio_sda	= RT305X_GPIO_I2C_SD,
@@ -135,10 +89,12 @@ static void __init wl351_init(void)
 				RT305X_GPIO_MODE_I2C |
 				RT305X_GPIO_MODE_SPI |
 				RT305X_GPIO_MODE_MDIO);
-	rt305x_register_flash(0, &wl351_flash_data);
+
+	rt305x_register_flash(0);
+
 	ramips_register_gpio_leds(-1, ARRAY_SIZE(wl351_leds_gpio),
 						wl351_leds_gpio);
-	ramips_register_gpio_buttons(-1, WL351_BUTTONS_POLL_INTERVAL,
+	ramips_register_gpio_buttons(-1, WL351_KEYS_POLL_INTERVAL,
 				     ARRAY_SIZE(wl351_gpio_buttons),
 				     wl351_gpio_buttons);
 	// external rtl8366rb

@@ -8,24 +8,6 @@
 LEDS_MENU:=LED modules
 
 
-ifeq ($(strip $(call CompareKernelPatchVer,$(KERNEL_PATCHVER),lt,2.6.39)),1)
-define KernelPackage/leds-alix
-  SUBMENU:=$(LEDS_MENU)
-  TITLE:=PCengines ALIX LED support
-  DEPENDS:=@TARGET_x86
-  KCONFIG:=CONFIG_LEDS_ALIX2
-  FILES:=$(LINUX_DIR)/drivers/leds/leds-alix2.ko
-  AUTOLOAD:=$(call AutoLoad,50,leds-alix2)
-endef
-
-define KernelPackage/leds-alix/description
- Kernel module for PCengines ALIX LEDs
-endef
-
-$(eval $(call KernelPackage,leds-alix))
-endif
-
-
 define KernelPackage/leds-gpio
   SUBMENU:=$(LEDS_MENU)
   TITLE:=GPIO LED support
@@ -56,21 +38,6 @@ define KernelPackage/leds-net48xx/description
 endef
 
 $(eval $(call KernelPackage,leds-net48xx))
-
-define KernelPackage/leds-net5501
-  SUBMENU:=$(LEDS_MENU)
-  TITLE:=Soekris Net5501 LED support
-  DEPENDS:=@TARGET_x86 +kmod-gpio-cs5535 +kmod-leds-gpio
-  KCONFIG:=CONFIG_LEDS_NET5501
-  FILES:=$(LINUX_DIR)/drivers/leds/leds-net5501.ko
-  AUTOLOAD:=$(call AutoLoad,50,leds-net5501)
-endef
-
-define KernelPackage/leds-net5501/description
- Kernel module for Soekris Net5501 LEDs
-endef
-
-$(eval $(call KernelPackage,leds-net5501))
 
 
 define KernelPackage/leds-rb750
@@ -216,3 +183,34 @@ define KernelPackage/ledtrig-usbdev/description
 endef
 
 $(eval $(call KernelPackage,ledtrig-usbdev))
+
+
+define KernelPackage/ledtrig-default-on
+  SUBMENU:=$(LEDS_MENU)
+  TITLE:=LED Default ON Trigger
+  KCONFIG:=CONFIG_LEDS_TRIGGER_DEFAULT_ON
+  FILES:=$(LINUX_DIR)/drivers/leds/ledtrig-default-on.ko
+  AUTOLOAD:=$(call AutoLoad,50,ledtrig-default-on)
+endef
+
+define KernelPackage/ledtrig-default-on/description
+ Kernel module that allows LEDs to be initialised in the ON state.
+endef
+
+$(eval $(call KernelPackage,ledtrig-default-on))
+
+
+define KernelPackage/ledtrig-timer
+  SUBMENU:=$(LEDS_MENU)
+  TITLE:=LED Timer Trigger
+  KCONFIG:=CONFIG_LEDS_TRIGGER_TIMER
+  FILES:=$(LINUX_DIR)/drivers/leds/ledtrig-timer.ko
+  AUTOLOAD:=$(call AutoLoad,50,ledtrig-timer)
+endef
+
+define KernelPackage/ledtrig-timer/description
+ Kernel module that allows LEDs to be controlled by a programmable timer
+ via sysfs.
+endef
+
+$(eval $(call KernelPackage,ledtrig-timer))

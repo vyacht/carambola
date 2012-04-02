@@ -22,16 +22,22 @@ platform_check_image() {
 	dir-600-b2 | \
 	esr-9753 | \
 	fonera20n | \
+	freestation5 | \
 	hw550-3g | \
 	mofi3500-3gn | \
 	nbg-419n | \
 	nw718 | \
 	omni-emb | \
 	rt-g32-b1 | \
+	rt-n10-plus | \
 	rt-n15 | \
+	rt-n56u | \
+	sl-r7205 | \
 	w502u |\
+	wr6202 |\
 	v22rw-2x2 | \
 	wl341v3 | \
+	wl-330n | \
 	wli-tx4-ag300n | \
 	whr-g300n |\
 	wr512-3gn)

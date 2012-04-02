@@ -16,6 +16,7 @@ mac80211_hostapd_setup_base() {
 	config_get beacon_int "$device" beacon_int
 	config_get basic_rate_list "$device" basic_rate
 	config_get_bool noscan "$device" noscan
+	config_get_bool short_preamble "$device" short_preamble "0"
 
 	hostapd_set_log_options base_cfg "$device"
 
@@ -76,6 +77,8 @@ mac80211_hostapd_setup_base() {
 			brstr="$brstr$brval"
 		done
 	}
+
+	append base_cfg "preamble=$short_preamble" "$N"
 	
 	cat >> "$cfgfile" <<EOF
 ctrl_interface=/var/run/hostapd-$phy
@@ -444,6 +447,17 @@ enable_mac80211() {
 				config_get mcast_rate "$vif" mcast_rate
 
 				local keyspec=""
+				[ "$encryption" == "psk" -o "$encryption" == "psk2" ] && {
+					if eval "type wpa_supplicant_setup_vif" 2>/dev/null >/dev/null; then
+						wpa_supplicant_setup_vif "$vif" nl80211 "${hostapd_ctrl:+-H $hostapd_ctrl}" $freq || {
+							echo "enable_mac80211($device): Failed to set up wpa_supplicant for interface $ifname" >&2
+							# make sure this wifi interface won't accidentally stay open without encryption
+							ifconfig "$ifname" down
+							continue
+						}
+					fi
+				}
+
 				[ "$encryption" == "wep" ] && {
 					case "$key" in
 						[1234])
@@ -483,7 +497,7 @@ enable_mac80211() {
 
 				config_get htmode "$device" htmode
 				case "$htmode" in
-					HT20|HT40+|HT40-) ;;
+					HT20|HT40+|HT40-|NOHT) ;;
 					*) htmode= ;;
 				esac
 

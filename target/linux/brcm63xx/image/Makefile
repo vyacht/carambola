@@ -153,8 +153,15 @@ define Image/Build
 	$(call Image/Build/CFE,$(1),96348GW,6348,96348GW-bc221,,--layoutver 5)
 	$(call Image/Build/CFE,$(1),6338GW,6338,6338GW-generic,,)
 	$(call Image/Build/CFE,$(1),6338W,6338,6338W-generic,,)
-	$(call Image/Build/CFE,$(1),96348GW-11,6348,96348GW-11-gen)
-	$(call Image/Build/CFE,$(1),96348GW-10,6348,96348GW-10-gen)
+	$(call Image/Build/CFE,$(1),96348GW-11,6348,96348GW-11-generic)
+	$(call Image/Build/CFE,$(1),96348GW-10,6348,96348GW-10-generic)
+	$(call Image/Build/CFE,$(1),96358VW,6358,96358VW-generic)
+	$(call Image/Build/CFE,$(1),96358VW2,6358,96358VW2-generic)
+
+        ifeq ($(strip $(call CompareKernelPatchVer,$(KERNEL_PATCHVER),ge,3.3)),1)
+		$(call Image/Build/CFE,$(1),96368MVNgr,6368,96368MVNgr-generic)
+		$(call Image/Build/CFE,$(1),96368MVWG,6368,96368MVWG-generic)
+        endif
 
 	# BT Voyager V210_BTR
 	$(call Image/Build/CFE,$(1),V210_BB,6348,BTV210_BTR,,--layoutver 5)

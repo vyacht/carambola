@@ -2,7 +2,7 @@ LINUX_VERSION:=3.2.2
 BOARDNAME:=PCEngines alix2
 FEATURES:=squashfs jffs2 ext4 pci usb gpio
 DEFAULT_PACKAGES += \
-			kmod-crypto-hw-geode kmod-crypto-ocf \
+			kmod-crypto-hw-geode kmod-crypto-ocf kmod-crypto-aes kmod-crypto-cbc \
 			kmod-gpio-cs5535-new kmod-gpio-nsc \
 			kmod-wdt-geode kmod-cs5535-clockevt kmod-cs5535-mfgpt \
 			kmod-cs5536 \
@@ -23,8 +23,8 @@ DEFAULT_PACKAGES += \
 
 CS5535_MASK:=0x0b000042
 
-CFLAGS += -Os -pipe -march=k6-2 -fno-align-functions -fno-align-loops -fno-align-jumps \
-	  -fno-align-labels
+CFLAGS += -march=geode -Os -mmmx -m3dnow -fno-align-jumps -fno-align-functions \
+	-fno-align-labels -fno-align-loops -pipe -fomit-frame-pointer
 
 define Target/Description
 	Build firmware images for PCEngines alix2 board

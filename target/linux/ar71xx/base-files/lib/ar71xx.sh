@@ -88,6 +88,9 @@ tplink_board_detect() {
 	"084100"*)
 		model="TP-Link TL-WR841N/ND"
 		;;
+	"084200"*)
+		model="TP-Link TL-WR842N/ND"
+		;;
 	"090100"*)
 		model="TP-Link TL-WA901N/ND"
 		;;
@@ -160,7 +163,7 @@ ar71xx_board_detect() {
 	*AW-NR580)
 		name="aw-nr580"
 		;;
-	*DB120)
+	*"DB120 reference board")
 		name="db120"
 		;;
 	*"DIR-600 rev. A1")
@@ -177,6 +180,9 @@ ar71xx_board_detect() {
 		;;
 	*JA76PF)
 		name="ja76pf"
+		;;
+	*JA76PF2)
+		name="ja76pf2"
 		;;
 	*"Bullet M")
 		name="bullet-m"
@@ -241,6 +247,9 @@ ar71xx_board_detect() {
 	*"RouterBOARD 750")
 		name="rb-750"
 		;;
+	*"RouterBOARD 750GL")
+		name="rb-750gl"
+		;;
 	*"Rocket M")
 		name="rocket-m"
 		;;
@@ -255,6 +264,9 @@ ar71xx_board_detect() {
 		;;
 	*TEW-632BRP)
 		name="tew-632brp"
+		;;
+	*TEW-673GRU)
+		name="tew-673gru"
 		;;
 	*TL-WR1043ND)
 		name="tl-wr1043nd"

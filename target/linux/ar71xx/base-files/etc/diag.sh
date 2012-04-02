@@ -67,8 +67,9 @@ get_status_led() {
 	hornet-ub)
 		status_led="alfa:blue:wps"
 		;;
-	ja76pf)
-		status_led="ja76pf:green:led1"
+	ja76pf | \
+	ja76pf2)
+		status_led="jjplus:green:led1"
 		;;
 	ls-sr71)
 		status_led="ubnt:green:d22"
@@ -97,6 +98,9 @@ get_status_led() {
 		;;
 	tew-632brp)
 		status_led="tew-632brp:green:status"
+		;;
+	tew-673gru)
+		status_led="trendnet:blue:wps"
 		;;
 	tl-mr3020)
 		status_led="tp-link:green:wps"
@@ -158,6 +162,8 @@ set_state() {
 	case "$1" in
 	preinit)
 		insmod leds-gpio
+		insmod ledtrig-default-on
+		insmod ledtrig-timer
 		status_led_set_timer 200 200
 		;;
 	failsafe)
