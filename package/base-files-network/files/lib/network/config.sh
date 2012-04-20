@@ -3,6 +3,8 @@
 
 # DEBUG="echo"
 
+. /lib/functions/service.sh
+
 do_sysctl() {
 	[ -n "$2" ] && \
 		sysctl -n -e -w "$1=$2" >/dev/null || \
@@ -83,6 +85,7 @@ add_vlan() {
 
 	[ "$1" = "$vif" ] || ifconfig "$1" >/dev/null 2>/dev/null || {
 		ifconfig "$vif" up 2>/dev/null >/dev/null || add_vlan "$vif"
+		$DEBUG vconfig set_name_type DEV_PLUS_VID_NO_PAD
 		$DEBUG vconfig add "$vif" "${1##*\.}"
 		return 0
 	}
@@ -218,7 +221,8 @@ prepare_interface() {
 					$DEBUG brctl addif "br-$config" "$iface"
 					$DEBUG brctl stp "br-$config" $stp
 					[ -z "$macaddr" ] && macaddr="$(cat /sys/class/net/$iface/address)"
-					echo $igmp_snooping > /sys/devices/virtual/net/br-$config/bridge/multicast_snooping 2>/dev/null
+					[ -e /sys/devices/virtual/net/br-$config/bridge/multicast_snooping ] && \
+						echo $igmp_snooping > /sys/devices/virtual/net/br-$config/bridge/multicast_snooping
 					$DEBUG ifconfig "br-$config" hw ether $macaddr up
 					# Creating the bridge here will have triggered a hotplug event, which will
 					# result in another setup_interface() call, so we simply stop processing
@@ -370,7 +374,7 @@ setup_interface() {
 			local pidfile="/var/run/dhcp-${iface}.pid"
 
 			SERVICE_PID_FILE="$pidfile" \
-			service_stop udhcpc
+			service_stop /sbin/udhcpc
 
 			local ipaddr netmask hostname proto1 clientid vendorid broadcast reqopts
 			config_get ipaddr "$config" ipaddr
@@ -386,15 +390,21 @@ setup_interface() {
 				$DEBUG ifconfig "$iface" "$ipaddr" ${netmask:+netmask "$netmask"}
 
 			# additional request options
-			local opt dhcpopts
+			local opt dhcpopts daemonize
 			for opt in $reqopts; do
 				append dhcpopts "-O $opt"
 			done
 
 			# don't stay running in background if dhcp is not the main proto on the interface (e.g. when using pptp)
-			[ "$proto1" != "$proto" ] && append dhcpopts "-n -q" || append dhcpopts "-O rootpath -R &"
+			[ "$proto1" != "$proto" ] && {
+				append dhcpopts "-n -q"
+			} || {
+				append dhcpopts "-O rootpath -R"
+				daemonize=1
+			}
 			[ "$broadcast" = 1 ] && broadcast="-O broadcast" || broadcast=
 
+			SERVICE_DAEMONIZE=$daemonize \
 			SERVICE_PID_FILE="$pidfile" \
 			service_start /sbin/udhcpc -t 0 -i "$iface" \
 				${ipaddr:+-r $ipaddr} \

@@ -1,0 +1,103 @@
+Index: linux-3.2.13/arch/mips/ralink/rt305x/devices.c
+===================================================================
+--- linux-3.2.13.orig/arch/mips/ralink/rt305x/devices.c
++++ linux-3.2.13/arch/mips/ralink/rt305x/devices.c
+@@ -66,7 +66,9 @@ static struct platform_device rt305x_fla
+ };
+ 
+ static int rt305x_flash_instance __initdata;
+-void __init rt305x_register_flash(unsigned int id)
++void __init __rt305x_register_flash(unsigned int id,
++				    struct mtd_partition *parts,
++				    unsigned int nr_parts)
+ {
+ 	struct platform_device *pdev;
+ 	struct physmap_flash_data *pdata;
+@@ -105,12 +107,22 @@ void __init rt305x_register_flash(unsign
+ 		return;
+ 	}
+ 
++	if (parts != NULL) {
++		pdata->parts = parts;
++		pdata->nr_parts = nr_parts;
++	}
++
+ 	pdev->id = rt305x_flash_instance;
+ 
+ 	platform_device_register(pdev);
+ 	rt305x_flash_instance++;
+ }
+ 
++void __init rt305x_register_flash(unsigned int id)
++{
++	__rt305x_register_flash(id, NULL, 0);
++}
++
+ static void rt305x_fe_reset(void)
+ {
+ 	rt305x_sysc_wr(RT305X_RESET_FE, SYSC_REG_RESET_CTRL);
+Index: linux-3.2.13/arch/mips/ralink/rt305x/devices.h
+===================================================================
+--- linux-3.2.13.orig/arch/mips/ralink/rt305x/devices.h
++++ linux-3.2.13/arch/mips/ralink/rt305x/devices.h
+@@ -13,7 +13,7 @@
+ 
+ #include <asm/mach-ralink/rt305x_esw_platform.h>
+ 
+-struct physmap_flash_data;
++struct mtd_partition;
+ struct spi_board_info;
+ 
+ extern struct physmap_flash_data rt305x_flash0_data;
+@@ -22,6 +22,9 @@ extern struct physmap_flash_data rt305x_
+ extern struct rt305x_esw_platform_data rt305x_esw_data;
+ 
+ void rt305x_register_flash(unsigned int id);
++void __rt305x_register_flash(unsigned int id,
++			     struct mtd_partition* parts,
++			     unsigned int nr_parts);
+ void rt305x_register_ethernet(void);
+ void rt305x_register_wifi(void);
+ void rt305x_register_wdt(void);
+Index: linux-3.2.13/arch/mips/ralink/rt305x/mach-carambola.c
+===================================================================
+--- linux-3.2.13.orig/arch/mips/ralink/rt305x/mach-carambola.c
++++ linux-3.2.13/arch/mips/ralink/rt305x/mach-carambola.c
+@@ -24,8 +24,6 @@
+ 
+ #include "devices.h"
+ 
+-#ifdef CONFIG_MTD_PARTITIONS
+-
+ #define CARAMBOLA_UBOOT_SIZE	0x030000 /*  192KB */
+ #define CARAMBOLA_UBOOT_ENV	0x010000 /*   64KB */
+ #define CARAMBOLA_FACTORY_SIZE	0x010000 /*   64KB */
+@@ -60,15 +58,6 @@ static struct mtd_partition carambola_pa
+ 		.size   = CARAMBOLA_KERNEL_SIZE + CARAMBOLA_ROOTFS_SIZE,
+ 	}
+ };
+-#endif /* CONFIG_MTD_PARTITIONS */
+-
+-static struct physmap_flash_data carambola_flash_data = {
+-#ifdef CONFIG_MTD_PARTITIONS
+-	.nr_parts	= ARRAY_SIZE(carambola_partitions),
+-	.parts		= carambola_partitions,
+-#endif
+-};
+-
+ 
+ static int __init carambola_register_gpiodev(void)
+ {
+@@ -109,7 +98,11 @@ static void __init carambola_init(void)
+ 			 RT305X_GPIO_MODE_I2C);
+ 	carambola_register_gpiodev();
+ 	platform_add_devices(carambola_devices, ARRAY_SIZE(carambola_devices));
+-	rt305x_register_flash(0, &carambola_flash_data);
++
++	/* we want fixed partitions sizes for now */
++	__rt305x_register_flash(0,
++				carambola_partitions,
++				ARRAY_SIZE(carambola_partitions));
+ 
+ 	rt305x_esw_data.vlan_config = RT305X_ESW_VLAN_CONFIG_LLLLW;
+ 	rt305x_register_ethernet();

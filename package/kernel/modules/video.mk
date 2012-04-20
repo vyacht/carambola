@@ -18,7 +18,9 @@ define KernelPackage/video-core
 	CONFIG_VIDEO_V4L1=y \
 	CONFIG_VIDEO_ALLOW_V4L1=y \
 	CONFIG_VIDEO_CAPTURE_DRIVERS=y \
-	CONFIG_V4L_USB_DRIVERS=y
+	CONFIG_V4L_USB_DRIVERS=y \
+	CONFIG_V4L_PCI_DRIVERS=y \
+	CONFIG_V4L_PLATFORM_DRIVERS=y
 ifeq ($(strip $(call CompareKernelPatchVer,$(KERNEL_PATCHVER),ge,2.6.38)),1)
   FILES:= \
 	$(LINUX_DIR)/drivers/media/video/v4l2-common.ko \
@@ -295,6 +297,21 @@ define KernelPackage/video-gspca-ov534/description
 endef
 
 $(eval $(call KernelPackage,video-gspca-ov534))
+
+
+define KernelPackage/video-gspca-ov534-9
+  TITLE:=ov534-9 webcam support
+  KCONFIG:=CONFIG_USB_GSPCA_OV534_9
+  FILES:=$(LINUX_DIR)/drivers/media/video/gspca/gspca_ov534_9.ko
+  AUTOLOAD:=$(call AutoLoad,75,gspca_ov534_9)
+  $(call AddDepends/video-gspca)
+endef
+
+define KernelPackage/video-gspca-ov534-9/description
+ The OV534-9 USB Camera Driver (ov534_9) kernel module.
+endef
+
+$(eval $(call KernelPackage,video-gspca-ov534-9))
 
 
 define KernelPackage/video-gspca-pac207
