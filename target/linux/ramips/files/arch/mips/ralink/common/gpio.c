@@ -225,6 +225,11 @@ void __init ramips_gpio_irq_init(struct ramips_gpio_data *data)
 
 	gpio_data = data;
 
+	if (data->irq_base == 0) {
+		printk(KERN_WARNING "GPIO irq base not specified!!!\n");
+		return;
+	}
+
 	for (i = 0; i < data->num_chips; i++) {
 		rg = &data->chips[i];
 		for (j = rg->chip.base; j < rg->chip.base + rg->chip.ngpio; j++) {
