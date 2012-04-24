@@ -12,10 +12,10 @@ Subject: [PATCH] Citramona support
  arch/mips/ralink/rt3883/devices.h               |    4 +++
  6 files changed, 50 insertions(+), 1 deletion(-)
 
-diff --git a/arch/mips/include/asm/mach-ralink/machine.h b/arch/mips/include/asm/mach-ralink/machine.h
-index eaef21a..bc9e628 100644
---- a/arch/mips/include/asm/mach-ralink/machine.h
-+++ b/arch/mips/include/asm/mach-ralink/machine.h
+Index: linux-3.2.13/arch/mips/include/asm/mach-ralink/machine.h
+===================================================================
+--- linux-3.2.13.orig/arch/mips/include/asm/mach-ralink/machine.h
++++ linux-3.2.13/arch/mips/include/asm/mach-ralink/machine.h
 @@ -57,4 +57,6 @@ enum ramips_mach_type {
  
  	/* RT3662 based machines */
@@ -23,10 +23,10 @@ index eaef21a..bc9e628 100644
 +	RAMIPS_MACH_CITRAMONA,          /* "Citramona" */
 +
  };
-diff --git a/arch/mips/include/asm/mach-ralink/rt3883_regs.h b/arch/mips/include/asm/mach-ralink/rt3883_regs.h
-index b36cabe..bb89de7 100644
---- a/arch/mips/include/asm/mach-ralink/rt3883_regs.h
-+++ b/arch/mips/include/asm/mach-ralink/rt3883_regs.h
+Index: linux-3.2.13/arch/mips/include/asm/mach-ralink/rt3883_regs.h
+===================================================================
+--- linux-3.2.13.orig/arch/mips/include/asm/mach-ralink/rt3883_regs.h
++++ linux-3.2.13/arch/mips/include/asm/mach-ralink/rt3883_regs.h
 @@ -66,6 +66,7 @@
  #define RT3883_WLAN_SIZE	0x40000
  #define RT3883_USBHOST_SIZE	0x40000
@@ -35,10 +35,10 @@ index b36cabe..bb89de7 100644
  #define RT3883_SRAM_SIZE	(32 * 1024 * 1024)
  
  /* SYSC registers */
-diff --git a/arch/mips/ralink/rt3883/Kconfig b/arch/mips/ralink/rt3883/Kconfig
-index 5aa040d..ae0c40d 100644
---- a/arch/mips/ralink/rt3883/Kconfig
-+++ b/arch/mips/ralink/rt3883/Kconfig
+Index: linux-3.2.13/arch/mips/ralink/rt3883/Kconfig
+===================================================================
+--- linux-3.2.13.orig/arch/mips/ralink/rt3883/Kconfig
++++ linux-3.2.13/arch/mips/ralink/rt3883/Kconfig
 @@ -8,6 +8,11 @@ config RT3883_MACH_RT_N56U
  	select RALINK_DEV_GPIO_BUTTONS
  	select RALINK_DEV_GPIO_LEDS
@@ -51,20 +51,20 @@ index 5aa040d..ae0c40d 100644
  endmenu
  
  endif
-diff --git a/arch/mips/ralink/rt3883/Makefile b/arch/mips/ralink/rt3883/Makefile
-index 3068d58..4165c67 100644
---- a/arch/mips/ralink/rt3883/Makefile
-+++ b/arch/mips/ralink/rt3883/Makefile
-@@ -12,3 +12,4 @@ obj-y	:= irq.o setup.o devices.o rt3883.o clock.o
+Index: linux-3.2.13/arch/mips/ralink/rt3883/Makefile
+===================================================================
+--- linux-3.2.13.orig/arch/mips/ralink/rt3883/Makefile
++++ linux-3.2.13/arch/mips/ralink/rt3883/Makefile
+@@ -12,3 +12,4 @@ obj-y	:= irq.o setup.o devices.o rt3883.
  obj-$(CONFIG_EARLY_PRINTK)		+= early_printk.o
  
  obj-$(CONFIG_RT3883_MACH_RT_N56U)	+= mach-rt-n56u.o
 +obj-$(CONFIG_RT3883_MACH_CITRAMONA)     += mach-citramona.o
-diff --git a/arch/mips/ralink/rt3883/devices.c b/arch/mips/ralink/rt3883/devices.c
-index 8d394bb..f49eb7d 100644
---- a/arch/mips/ralink/rt3883/devices.c
-+++ b/arch/mips/ralink/rt3883/devices.c
-@@ -66,8 +66,30 @@ static struct platform_device rt3883_flash1_device = {
+Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.c
+===================================================================
+--- linux-3.2.13.orig/arch/mips/ralink/rt3883/devices.c
++++ linux-3.2.13/arch/mips/ralink/rt3883/devices.c
+@@ -66,8 +66,30 @@ static struct platform_device rt3883_fla
  	},
  };
  
@@ -96,7 +96,7 @@ index 8d394bb..f49eb7d 100644
  {
  	struct platform_device *pdev;
  	struct physmap_flash_data *pdata;
-@@ -84,6 +106,11 @@ void __init rt3883_register_pflash(unsigned int id)
+@@ -84,6 +106,11 @@ void __init rt3883_register_pflash(unsig
  		pdev = &rt3883_flash1_device;
  		reg = RT3883_FSCC_REG_FLASH_CFG1;
  		break;
@@ -108,7 +108,7 @@ index 8d394bb..f49eb7d 100644
  	default:
  		return;
  	}
-@@ -115,6 +142,10 @@ void __init rt3883_register_pflash(unsigned int id)
+@@ -115,6 +142,10 @@ void __init rt3883_register_pflash(unsig
  		pr_warn("RT3883: flash bank%d: invalid width detected\n", id);
  		return;
  	}
@@ -119,7 +119,7 @@ index 8d394bb..f49eb7d 100644
  
  	pdev->id = rt3883_flash_instance;
  
-@@ -122,6 +153,11 @@ void __init rt3883_register_pflash(unsigned int id)
+@@ -122,6 +153,11 @@ void __init rt3883_register_pflash(unsig
  	rt3883_flash_instance++;
  }
  
@@ -131,10 +131,10 @@ index 8d394bb..f49eb7d 100644
  static atomic_t rt3883_usb_use_count = ATOMIC_INIT(0);
  
  static void rt3883_usb_host_start(void)
-diff --git a/arch/mips/ralink/rt3883/devices.h b/arch/mips/ralink/rt3883/devices.h
-index bbddc7e..56428e5 100644
---- a/arch/mips/ralink/rt3883/devices.h
-+++ b/arch/mips/ralink/rt3883/devices.h
+Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.h
+===================================================================
+--- linux-3.2.13.orig/arch/mips/ralink/rt3883/devices.h
++++ linux-3.2.13/arch/mips/ralink/rt3883/devices.h
 @@ -16,6 +16,10 @@ struct physmap_flash_data;
  extern struct physmap_flash_data rt3883_flash0_data;
  extern struct physmap_flash_data rt3883_flash1_data;
@@ -146,6 +146,137 @@ index bbddc7e..56428e5 100644
  
  extern struct ramips_nand_platform_data rt3883_nand_data;
  void rt3883_register_nand(void);
--- 
-1.7.9.5
-
+Index: linux-3.2.13/arch/mips/ralink/rt3883/mach-citramona.c
+===================================================================
+--- /dev/null
++++ linux-3.2.13/arch/mips/ralink/rt3883/mach-citramona.c
+@@ -0,0 +1,129 @@
++/*
++ *  CITRAMONA board support
++ *
++ *  Copyright (C) 2012 Zilvinas Valinskas <zilvinas@8devices.com>
++ *  Copyright (C) 2012 Evaldas Palaima    <evaldas@8devices.com>
++ *  Copyright (C) 2012 Modestas Stankus   <modestas@8devices.com>
++ *
++ *  This program is free software; you can redistribute it and/or modify it
++ *  under the terms of the GNU General Public License version 2 as published
++ *  by the Free Software Foundation.
++ */
++
++#include <linux/init.h>
++#include <linux/platform_device.h>
++#include <linux/mtd/mtd.h>
++#include <linux/mtd/partitions.h>
++#include <linux/mtd/physmap.h>
++
++#include <asm/mach-ralink/machine.h>
++#include <asm/sizes.h>
++#include <linux/i2c.h>
++#include <linux/i2c-gpio.h>
++
++#include <linux/ethtool.h>
++
++#include <asm/mach-ralink/dev-gpio-buttons.h>
++#include <asm/mach-ralink/dev-gpio-leds.h>
++#include <asm/mach-ralink/rt3883.h>
++#include <asm/mach-ralink/rt3883_regs.h>
++#include <asm/mach-ralink/ramips_eth_platform.h>
++
++#include "devices.h"
++
++#define CITRAMONA_UBOOT_SIZE	0x030000 /*  192KB */
++#define CITRAMONA_UBOOT_ENV	0x010000 /*   64KB */
++#define CITRAMONA_FACTORY_SIZE	0x010000 /*   64KB */
++#define CITRAMONA_KERNEL_SIZE	0x120000 /* 1152KB */
++#define CITRAMONA_ROOTFS_SIZE	0x690000 /* 6720KB */
++
++static struct mtd_partition citramona_partitions[] = {
++	{
++		.name   = "u-boot",
++		.offset = 0,
++		.size   = CITRAMONA_UBOOT_SIZE,
++		.mask_flags = MTD_WRITEABLE,	/* precaution */
++	}, {
++		.name   = "u-boot-env",
++		.offset = MTDPART_OFS_APPEND,
++		.size   = CITRAMONA_UBOOT_ENV,
++	}, {
++		.name   = "factory",
++		.offset = MTDPART_OFS_APPEND,
++		.size   = CITRAMONA_FACTORY_SIZE,
++	}, {
++		.name   = "kernel",
++		.offset = MTDPART_OFS_APPEND,
++		.size   = CITRAMONA_KERNEL_SIZE,
++	}, {
++		.name   = "rootfs",
++		.offset = MTDPART_OFS_APPEND,
++		.size	= CITRAMONA_ROOTFS_SIZE,
++	}, {
++		.name   = "firmware", /* skip u-boot, uboot-env and factory partitions */
++		.offset = CITRAMONA_UBOOT_SIZE + CITRAMONA_UBOOT_ENV + CITRAMONA_FACTORY_SIZE,
++		.size   = CITRAMONA_KERNEL_SIZE + CITRAMONA_ROOTFS_SIZE,
++	}
++};
++
++static int __init citramona_register_gpiodev(void)
++{
++       static struct resource res = {
++               .start = 0xFFFFFFFF,
++       };
++       struct platform_device *pdev;
++
++       pdev = platform_device_register_simple("GPIODEV", 0, &res, 1);
++       if (!pdev) {
++               printk(KERN_ERR "citramona: GPIODEV init failed\n");
++               return -ENODEV;
++       }
++
++       return 0;
++}
++
++static struct i2c_gpio_platform_data citramona_i2c_gpio_data = {
++	.sda_pin        = 1,
++	.scl_pin        = 2,
++};
++
++static struct platform_device citramona_i2c_gpio = {
++	.name           = "i2c-gpio",
++	.id             = 0,
++	.dev     = {
++		.platform_data  = &citramona_i2c_gpio_data,
++	},
++};
++
++static struct platform_device *citramona_devices[] __initdata = {
++        &citramona_i2c_gpio
++};
++
++static void __init citramona_init(void)
++{
++	/*
++	rt3883_gpio_init(RT3883_GPIO_MODE_UART0(RT3883_GPIO_MODE_GPIO) |
++			 RT3883_GPIO_MODE_PCI(RT3883_GPIO_MODE_PCI_FNC));
++	*/
++
++
++	citramona_register_gpiodev();
++
++	/* we want fixed partitions sizes for now */
++	__rt3883_register_flash(2,
++				citramona_partitions,
++				ARRAY_SIZE(citramona_partitions));
++
++	rt3883_eth_data.speed = SPEED_100;
++	rt3883_eth_data.duplex = DUPLEX_FULL;
++	rt3883_eth_data.tx_fc = 1;
++	rt3883_eth_data.rx_fc = 1;
++	rt3883_register_ethernet();
++
++	rt3883_register_wdt(false);
++	rt3883_register_usbhost();
++	platform_add_devices(citramona_devices, ARRAY_SIZE(citramona_devices));
++
++}
++
++MIPS_MACHINE(RAMIPS_MACH_CITRAMONA, "CITRAMONA", "CITRAMONA", citramona_init);
