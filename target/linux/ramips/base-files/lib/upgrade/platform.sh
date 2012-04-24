@@ -17,6 +17,7 @@ platform_check_image() {
 	all0256n | \
 	bc2 | \
 	carambola | \
+	citramona | \
 	dir-300-b1 | \
 	dir-600-b1 | \
 	dir-600-b2 | \

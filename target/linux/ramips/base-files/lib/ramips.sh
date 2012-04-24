@@ -146,7 +146,9 @@ ramips_board_name() {
 	*"CARAMBOLA")
 		name="carambola"
 		;;
-
+	*"CITRAMONA")
+		name="citramona"
+		;;
 	*"WR512-3GN-like router")
 		name="wr512-3gn"
 		;;
