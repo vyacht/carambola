@@ -64,7 +64,15 @@ Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.c
 ===================================================================
 --- linux-3.2.13.orig/arch/mips/ralink/rt3883/devices.c
 +++ linux-3.2.13/arch/mips/ralink/rt3883/devices.c
-@@ -66,8 +66,30 @@ static struct platform_device rt3883_fla
+@@ -18,6 +18,7 @@
+ #include <linux/err.h>
+ #include <linux/clk.h>
+ #include <linux/rt2x00_platform.h>
++#include <linux/etherdevice.h>
+ 
+ #include <asm/addrspace.h>
+ 
+@@ -66,8 +67,30 @@ static struct platform_device rt3883_fla
  	},
  };
  
@@ -96,7 +104,7 @@ Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.c
  {
  	struct platform_device *pdev;
  	struct physmap_flash_data *pdata;
-@@ -84,6 +106,11 @@ void __init rt3883_register_pflash(unsig
+@@ -84,6 +107,11 @@ void __init rt3883_register_pflash(unsig
  		pdev = &rt3883_flash1_device;
  		reg = RT3883_FSCC_REG_FLASH_CFG1;
  		break;
@@ -108,7 +116,7 @@ Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.c
  	default:
  		return;
  	}
-@@ -115,6 +142,10 @@ void __init rt3883_register_pflash(unsig
+@@ -115,6 +143,10 @@ void __init rt3883_register_pflash(unsig
  		pr_warn("RT3883: flash bank%d: invalid width detected\n", id);
  		return;
  	}
@@ -119,7 +127,7 @@ Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.c
  
  	pdev->id = rt3883_flash_instance;
  
-@@ -122,6 +153,11 @@ void __init rt3883_register_pflash(unsig
+@@ -122,6 +154,11 @@ void __init rt3883_register_pflash(unsig
  	rt3883_flash_instance++;
  }
  
@@ -131,6 +139,40 @@ Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.c
  static atomic_t rt3883_usb_use_count = ATOMIC_INIT(0);
  
  static void rt3883_usb_host_start(void)
+@@ -285,6 +322,22 @@ static struct platform_device rt3883_eth
+ 	}
+ };
+ 
++
++#define EEPROM_FLASH_BASE  0x1c040000
++#define EEPROM_FLASH_SIZE 0x200
++
++void __init rt3883_read_ethernet_mac(unsigned char *addr)
++{
++	void __iomem *base_addr;
++
++	base_addr = ioremap(EEPROM_FLASH_BASE, EEPROM_FLASH_SIZE);
++	if (base_addr == NULL)
++		return;
++
++	memcpy(addr, base_addr + 0x28, 6);
++	iounmap(base_addr);
++}
++
+ void __init rt3883_register_ethernet(void)
+ {
+ 	struct clk *clk;
+@@ -295,6 +348,10 @@ void __init rt3883_register_ethernet(voi
+ 
+ 	rt3883_eth_data.sys_freq = clk_get_rate(clk);
+ 
++	rt3883_read_ethernet_mac(rt3883_eth_data.mac);
++	if (!is_valid_ether_addr(rt3883_eth_data.mac)) 
++		random_ether_addr(rt3883_eth_data.mac);
++
+ 	platform_device_register(&rt3883_eth_device);
+ }
+ 
 Index: linux-3.2.13/arch/mips/ralink/rt3883/devices.h
 ===================================================================
 --- linux-3.2.13.orig/arch/mips/ralink/rt3883/devices.h
