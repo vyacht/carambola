@@ -3,7 +3,7 @@
 # Copyright (c) 2010-2012 OpenWrt.org
 
 [ -n "$INCLUDE_ONLY" ] || {
-	. /etc/functions.sh
+	. /lib/functions.sh
 	. ../netifd-proto.sh
 	init_proto "$@"
 }
@@ -31,6 +31,10 @@ test_6to4_rfc1918()
 	[ $1 -eq  10 ] && return 0
 	[ $1 -eq 192 ] && [ $2 -eq 168 ] && return 0
 	[ $1 -eq 172 ] && [ $2 -ge  16 ] && [ $2 -le  31 ] && return 0
+
+	# RFC 6598
+	[ $1 -eq 100 ] && [ $2 -ge  64 ] && [ $2 -le 127 ] && return 0
+
 	return 1
 }
 
@@ -175,6 +179,7 @@ proto_6to4_setup() {
 
 		uci_revert_state radvd
 		config_load radvd
+		config_load network
 
 		adv_subnet=$((0x${adv_subnet:-1}))
 
@@ -221,7 +226,7 @@ proto_6to4_teardown() {
 }
 
 proto_6to4_init_config() {
-	no_device=1             
+	no_device=1
 	available=1
 
 	proto_config_add_string "ipaddr"

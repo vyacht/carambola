@@ -1,8 +1,8 @@
 --- a/arch/mips/bcm63xx/boards/board_bcm963xx.c
 +++ b/arch/mips/bcm63xx/boards/board_bcm963xx.c
-@@ -129,6 +129,55 @@ static struct board_info __initdata boar
- 		},
- 	},
+@@ -469,6 +469,54 @@ static struct board_info __initdata boar
+ 
+ 	.has_ohci0 = 1,
  };
 +
 +static struct board_info __initdata board_96348_D4PW = {
@@ -48,15 +48,14 @@
 +			.active_low	= 1,
 +			.type		= EV_KEY,
 +			.code		= KEY_RESTART,
-+			.threshold	= 3,
++			.debounce_interval = BCM963XX_KEYS_DEBOUNCE_INTERVAL,
 +		},
 +	},
 +};
-+
  #endif
  
  /*
-@@ -637,6 +686,7 @@ static const struct board_info __initdat
+@@ -640,6 +688,7 @@ static const struct board_info __initdat
  	&board_DV201AMR,
  	&board_96348gw_a,
  	&board_rta1025w_16,
