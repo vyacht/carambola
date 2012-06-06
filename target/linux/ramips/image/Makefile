@@ -258,6 +258,10 @@ define BuildFirmware/CARAMBOLA
 	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),1179648,6881280)
 endef
 
+define BuildFirmware/CITRAMONA
+	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),1179648,6881280)
+endef
+
 #
 # Templates
 #
@@ -416,6 +420,11 @@ define Image/Build/Profile/CARAMBOLA
 	$(call Image/Build/Template/$(fs_squash)/$(1),CARAMBOLA,carambola,CARAMBOLA)
 endef
 
+define Image/Build/Profile/CITRAMONA
+	$(call Image/Build/Template/$(fs_squash)/$(1),CITRAMONA,citramona,CITRAMONA)
+endef
+
+
 ifeq ($(CONFIG_RALINK_RT305X),y)
 define Image/Build/Profile/Default
 	$(call Image/Build/Profile/ALL0256N,$(1))
@@ -448,6 +457,13 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/CARAMBOLA,$(1))
 endef
 endif
+
+ifeq ($(CONFIG_RALINK_RT3883),y)
+define Image/Build/Profile/Default
+	$(call Image/Build/Profile/CITRAMONA,$(1))
+endef
+endif
+
 
 define Image/Build/Initramfs
 	$(call Image/Build/Profile/$(PROFILE),initramfs)
