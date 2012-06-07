@@ -1,0 +1,12 @@
+Index: linux-3.2.13/drivers/net/ethernet/ramips/ramips_main.c
+===================================================================
+--- linux-3.2.13.orig/drivers/net/ethernet/ramips/ramips_main.c
++++ linux-3.2.13/drivers/net/ethernet/ramips/ramips_main.c
+@@ -846,6 +846,7 @@ ramips_eth_open(struct net_device *dev)
+ 	struct raeth_priv *re = netdev_priv(dev);
+ 	int err;
+ 
++	re->skb_free_idx = 0;
+ 	err = request_irq(dev->irq, ramips_eth_irq, IRQF_DISABLED,
+ 			  dev->name, dev);
+ 	if (err)

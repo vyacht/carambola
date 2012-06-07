@@ -199,17 +199,25 @@ void __init ath79_register_mdio(unsigned int id, u32 phy_mask)
 
 	switch (ath79_soc) {
 	case ATH79_SOC_AR7240:
-	case ATH79_SOC_AR7241:
-	case ATH79_SOC_AR9330:
-	case ATH79_SOC_AR9331:
 		mdio_data->is_ar7240 = 1;
+		/* fall through */
+	case ATH79_SOC_AR7241:
+		mdio_data->builtin_switch = 1;
+		break;
+
+	case ATH79_SOC_AR9330:
+		mdio_data->is_ar9330 = 1;
+		/* fall through */
+	case ATH79_SOC_AR9331:
+		mdio_data->builtin_switch = 1;
 		break;
 
 	case ATH79_SOC_AR9341:
 	case ATH79_SOC_AR9342:
 	case ATH79_SOC_AR9344:
 		if (id == 1)
-			mdio_data->is_ar7240 = 1;
+			mdio_data->builtin_switch = 1;
+		mdio_data->is_ar934x = 1;
 		break;
 
 	default:
@@ -721,6 +729,8 @@ void __init ath79_register_eth(unsigned int id)
 			pdata->speed = SPEED_1000;
 			pdata->duplex = DUPLEX_FULL;
 			pdata->switch_data = &ath79_switch_data;
+
+			ath79_switch_data.phy_poll_mask |= BIT(4);
 		}
 		pdata->has_gbit = 1;
 		pdata->is_ar724x = 1;
@@ -776,6 +786,8 @@ void __init ath79_register_eth(unsigned int id)
 			pdata->speed = SPEED_1000;
 			pdata->duplex = DUPLEX_FULL;
 			pdata->switch_data = &ath79_switch_data;
+
+			ath79_switch_data.phy_poll_mask |= BIT(4);
 		}
 
 		pdata->has_gbit = 1;
