@@ -271,7 +271,7 @@ define BuildFirmware/WLITX4AG300N
 endef
 
 define BuildFirmware/CARAMBOLA
-	$(call BuildFirmware/Generic,$(1),$(2),board=$(3),1179648,6881280)
+	$(call BuildFirmware/Generic,$(1),$(2),$(call mkcmdline,$(3),ttyS1,115200),1179648,6881280)
 endef
 
 define BuildFirmware/CITRAMONA
