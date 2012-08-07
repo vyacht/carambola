@@ -17,6 +17,7 @@ else
   REVISION:=$(shell $(TOPDIR)/scripts/getver.sh)
 endif
 
+HOSTCC ?= gcc
 OPENWRTVERSION:=$(RELEASE)$(if $(REVISION), ($(REVISION)))
 export RELEASE
 export REVISION
@@ -32,7 +33,7 @@ unexport P4PORT P4USER P4CONFIG P4CLIENT
 # prevent user defaults for quilt from interfering
 unexport QUILT_PATCHES QUILT_PATCH_OPTS
 
-unexport C_INCLUDE_PATH
+unexport C_INCLUDE_PATH CROSS_COMPILE ARCH
 
 # prevent distro default LPATH from interfering
 unexport LPATH
@@ -69,12 +70,12 @@ prepare-tmpinfo: FORCE
 	fi
 
 scripts/config/mconf:
-	@$(_SINGLE)$(SUBMAKE) -s -C scripts/config all
+	@$(_SINGLE)$(SUBMAKE) -s -C scripts/config all CC="$(HOSTCC)"
 
 $(eval $(call rdep,scripts/config,scripts/config/mconf))
 
 scripts/config/conf:
-	@$(_SINGLE)$(SUBMAKE) -s -C scripts/config conf
+	@$(_SINGLE)$(SUBMAKE) -s -C scripts/config conf CC="$(HOSTCC)"
 
 config: scripts/config/conf prepare-tmpinfo FORCE
 	$< Config.in

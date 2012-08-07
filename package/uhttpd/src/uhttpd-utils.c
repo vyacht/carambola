@@ -119,7 +119,7 @@ bool uh_socket_wait(int fd, int sec, bool write)
 	while (((rv = select(fd+1, write ? NULL : &fds, write ? &fds : NULL,
 						 NULL, &timeout)) < 0) && (errno == EINTR))
 	{
-		D("IO: Socket(%d) select interrupted: %s\n",
+		D("IO: FD(%d) select interrupted: %s\n",
 				fd, strerror(errno));
 
 		continue;
@@ -127,7 +127,7 @@ bool uh_socket_wait(int fd, int sec, bool write)
 
 	if (rv <= 0)
 	{
-		D("IO: Socket(%d) appears dead (rv=%d)\n", fd, rv);
+		D("IO: FD(%d) appears dead (rv=%d)\n", fd, rv);
 		return false;
 	}
 
@@ -146,7 +146,7 @@ static int __uh_raw_send(struct client *cl, const char *buf, int len, int sec,
 		{
 			if (errno == EINTR)
 			{
-				D("IO: Socket(%d) interrupted\n", cl->fd.fd);
+				D("IO: FD(%d) interrupted\n", cl->fd.fd);
 				continue;
 			}
 			else if ((sec > 0) && (errno == EAGAIN || errno == EWOULDBLOCK))
@@ -156,7 +156,7 @@ static int __uh_raw_send(struct client *cl, const char *buf, int len, int sec,
 			}
 			else
 			{
-				D("IO: Socket(%d) write error: %s\n", fd, strerror(errno));
+				D("IO: FD(%d) write error: %s\n", fd, strerror(errno));
 				return -1;
 			}
 		}
@@ -168,19 +168,19 @@ static int __uh_raw_send(struct client *cl, const char *buf, int len, int sec,
 		 */
 		else if (rv == 0)
 		{
-			D("IO: Socket(%d) closed\n", fd);
+			D("IO: FD(%d) appears closed\n", fd);
 			return 0;
 		}
 		else if (rv < len)
 		{
-			D("IO: Socket(%d) short write %d/%d bytes\n", fd, rv, len);
+			D("IO: FD(%d) short write %d/%d bytes\n", fd, rv, len);
 			len -= rv;
 			buf += rv;
 			continue;
 		}
 		else
 		{
-			D("IO: Socket(%d) sent %d/%d bytes\n", fd, rv, len);
+			D("IO: FD(%d) sent %d/%d bytes\n", fd, rv, len);
 			return rv;
 		}
 	}
@@ -230,18 +230,18 @@ static int __uh_raw_recv(struct client *cl, char *buf, int len, int sec,
 			}
 			else
 			{
-				D("IO: Socket(%d) read error: %s\n", fd, strerror(errno));
+				D("IO: FD(%d) read error: %s\n", fd, strerror(errno));
 				return -1;
 			}
 		}
 		else if (rv == 0)
 		{
-			D("IO: Socket(%d) closed\n", fd);
+			D("IO: FD(%d) appears closed\n", fd);
 			return 0;
 		}
 		else
 		{
-			D("IO: Socket(%d) read %d bytes\n", fd, rv);
+			D("IO: FD(%d) read %d bytes\n", fd, rv);
 			return rv;
 		}
 	}
@@ -334,7 +334,7 @@ int uh_http_sendf(struct client *cl, struct http_request *req,
 	len = vsnprintf(buffer, sizeof(buffer), fmt, ap);
 	va_end(ap);
 
-	if ((req != NULL) && (req->version > 1.0))
+	if ((req != NULL) && (req->version > UH_HTTP_VER_1_0))
 		ensure_ret(uh_http_sendc(cl, buffer, len));
 	else if (len > 0)
 		ensure_ret(uh_tcp_send(cl, buffer, len));
@@ -348,7 +348,7 @@ int uh_http_send(struct client *cl, struct http_request *req,
 	if (len < 0)
 		len = strlen(buf);
 
-	if ((req != NULL) && (req->version > 1.0))
+	if ((req != NULL) && (req->version > UH_HTTP_VER_1_0))
 		ensure_ret(uh_http_sendc(cl, buf, len));
 	else if (len > 0)
 		ensure_ret(uh_tcp_send(cl, buf, len));
@@ -865,13 +865,13 @@ int uh_auth_check(struct client *cl, struct http_request *req,
 
 		/* 401 */
 		uh_http_sendf(cl, NULL,
-			"HTTP/%.1f 401 Authorization Required\r\n"
-			"WWW-Authenticate: Basic realm=\"%s\"\r\n"
-			"Content-Type: text/plain\r\n"
-			"Content-Length: 23\r\n\r\n"
-			"Authorization Required\n",
-				req->version, cl->server->conf->realm
-		);
+		              "%s 401 Authorization Required\r\n"
+		              "WWW-Authenticate: Basic realm=\"%s\"\r\n"
+		              "Content-Type: text/plain\r\n"
+		              "Content-Length: 23\r\n\r\n"
+		              "Authorization Required\n",
+		              http_versions[req->version],
+		              cl->server->conf->realm);
 
 		return 0;
 	}
@@ -922,7 +922,8 @@ struct listener * uh_listener_lookup(int sock)
 }
 
 
-struct client * uh_client_add(int sock, struct listener *serv)
+struct client * uh_client_add(int sock, struct listener *serv,
+                              struct sockaddr_in6 *peer)
 {
 	struct client *new = NULL;
 	socklen_t sl;
@@ -930,24 +931,24 @@ struct client * uh_client_add(int sock, struct listener *serv)
 	if ((new = (struct client *)malloc(sizeof(struct client))) != NULL)
 	{
 		memset(new, 0, sizeof(struct client));
+		memcpy(&new->peeraddr, peer, sizeof(new->peeraddr));
 
 		new->fd.fd  = sock;
 		new->server = serv;
 
-		/* get remote endpoint addr */
-		sl = sizeof(struct sockaddr_in6);
-		memset(&(new->peeraddr), 0, sl);
-		getpeername(sock, (struct sockaddr *) &(new->peeraddr), &sl);
+		new->rpipe.fd = -1;
+		new->wpipe.fd = -1;
 
 		/* get local endpoint addr */
 		sl = sizeof(struct sockaddr_in6);
-		memset(&(new->servaddr), 0, sl);
 		getsockname(sock, (struct sockaddr *) &(new->servaddr), &sl);
 
 		new->next = uh_clients;
 		uh_clients = new;
 
 		serv->n_clients++;
+
+		D("IO: Client(%d) allocated\n", new->fd.fd);
 	}
 
 	return new;
@@ -983,7 +984,7 @@ void uh_client_remove(struct client *cl)
 
 	for (cur = uh_clients; cur; prv = cur, cur = cur->next)
 	{
-		if ((cur == cl) || (!cl && cur->dead))
+		if (cur == cl)
 		{
 			if (prv)
 				prv->next = cur->next;
@@ -996,15 +997,45 @@ void uh_client_remove(struct client *cl)
 			if (cur->proc.pid)
 				uloop_process_delete(&cur->proc);
 
-			uloop_fd_delete(&cur->fd);
-			close(cur->fd.fd);
+			D("IO: Client(%d) freeing\n", cur->fd.fd);
 
-			D("IO: Socket(%d) closing\n", cur->fd.fd);
+			uh_ufd_remove(&cur->rpipe);
+			uh_ufd_remove(&cur->wpipe);
+			uh_ufd_remove(&cur->fd);
+
 			cur->server->n_clients--;
 
 			free(cur);
 			break;
 		}
+	}
+}
+
+
+void uh_ufd_add(struct uloop_fd *u, uloop_fd_handler h, unsigned int ev)
+{
+	if (h != NULL)
+	{
+		u->cb = h;
+		uloop_fd_add(u, ev);
+		D("IO: FD(%d) added to uloop\n", u->fd);
+	}
+}
+
+void uh_ufd_remove(struct uloop_fd *u)
+{
+	if (u->cb != NULL)
+	{
+		uloop_fd_delete(u);
+		D("IO: FD(%d) removed from uloop\n", u->fd);
+		u->cb = NULL;
+	}
+
+	if (u->fd > -1)
+	{
+		close(u->fd);
+		D("IO: FD(%d) closed\n", u->fd);
+		u->fd = -1;
 	}
 }
 

@@ -17,13 +17,16 @@ ramips_setup_interfaces()
 
 	case $board in
 	all0256n | \
+	all5002 | \
 	wl-330n)
 		ucidef_set_interface_lan "eth0.1"
 		;;
 
+	3g-6200n | \
 	argus-atp52b | \
 	b2c | \
 	nw718 | \
+	psr-680w | \
 	sl-r7205 | \
 	w502u | \
 	wr6202)
@@ -85,14 +88,16 @@ ramips_setup_macs()
 	local wan_mac=""
 
 	case $board in
-	all0256n)
+	all0256n | \
+	all5002)
 		lan_mac=$(ramips_get_mac_binary factory 40)
 		;;
-
+	3g-6200n | \
 	argus-atp52b | \
 	b2c | \
 	f5d8235-v1 | \
 	nw718 | \
+	psr-680w | \
 	rt-n15 | \
 	sl-r7205 | \
 	wl-351)
@@ -103,6 +108,11 @@ ramips_setup_macs()
 	w306r-v20)
 		lan_mac=$(ramips_get_mac_binary factory 4)
 		wan_mac=$(/usr/sbin/maccalc add "$lan_mac" 5)
+		;;
+
+	fonera20n)
+		lan_mac=$(ramips_get_mac_binary factory 40)
+		wan_mac=$(/usr/sbin/maccalc add "$lan_mac" 1)
 		;;
 
 	dir-300-b1 |\

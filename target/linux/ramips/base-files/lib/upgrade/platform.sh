@@ -14,13 +14,16 @@ platform_check_image() {
 	[ "$ARGC" -gt 1 ] && return 1
 
 	case "$board" in
+	3g-6200n | \
 	all0256n | \
+	all5002 | \
 	bc2 | \
 	carambola | \
 	citramona | \
 	dir-300-b1 | \
 	dir-600-b1 | \
 	dir-600-b2 | \
+	dap-1350 | \
 	esr-9753 | \
 	fonera20n | \
 	freestation5 | \
@@ -29,6 +32,7 @@ platform_check_image() {
 	nbg-419n | \
 	nw718 | \
 	omni-emb | \
+	psr-680w | \
 	rt-g32-b1 | \
 	rt-n10-plus | \
 	rt-n15 | \

@@ -1,18 +1,19 @@
-From 16535fe56591ff85acd6776f53ff515799b037ba Mon Sep 17 00:00:00 2001
+From 7008284716403237f6bc7d7590b3ed073555bd56 Mon Sep 17 00:00:00 2001
 From: Gabor Juhos <juhosg@openwrt.org>
 Date: Wed, 11 Jan 2012 22:25:11 +0100
-Subject: [PATCH 47/47] spi/ath79: make chipselect logic more flexible
+Subject: [PATCH 34/34] spi/ath79: make chipselect logic more flexible
 
 Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
 ---
  arch/mips/ath79/mach-ap121.c                       |    6 ++
+ arch/mips/ath79/mach-ap136.c                       |    6 ++
  arch/mips/ath79/mach-ap81.c                        |    6 ++
  arch/mips/ath79/mach-db120.c                       |    6 ++
  arch/mips/ath79/mach-pb44.c                        |    6 ++
  arch/mips/ath79/mach-ubnt-xm.c                     |    6 ++
  .../include/asm/mach-ath79/ath79_spi_platform.h    |    8 ++-
- drivers/spi/spi-ath79.c                            |   70 +++++++++++++-------
- 7 files changed, 82 insertions(+), 26 deletions(-)
+ drivers/spi/spi-ath79.c                            |   67 +++++++++++++-------
+ 8 files changed, 88 insertions(+), 23 deletions(-)
 
 --- a/arch/mips/ath79/mach-ap121.c
 +++ b/arch/mips/ath79/mach-ap121.c
@@ -32,6 +33,27 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
  		.max_speed_hz	= 25000000,
  		.modalias	= "mx25l1606e",
 +		.controller_data = &ap121_spi0_data,
+ 	}
+ };
+ 
+--- a/arch/mips/ath79/mach-ap136.c
++++ b/arch/mips/ath79/mach-ap136.c
+@@ -98,12 +98,18 @@ static struct gpio_keys_button ap136_gpi
+ 	},
+ };
+ 
++static struct ath79_spi_controller_data ap136_spi0_data = {
++	.cs_type = ATH79_SPI_CS_TYPE_INTERNAL,
++	.cs_line = 0,
++};
++
+ static struct spi_board_info ap136_spi_info[] = {
+ 	{
+ 		.bus_num	= 0,
+ 		.chip_select	= 0,
+ 		.max_speed_hz	= 25000000,
+ 		.modalias	= "mx25l6405d",
++		.controller_data = &ap136_spi0_data,
  	}
  };
  
@@ -156,7 +178,7 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
  
  	if (is_active) {
  		/* set initial clock polarity */
-@@ -80,20 +83,21 @@ static void ath79_spi_chipselect(struct
+@@ -80,20 +83,24 @@ static void ath79_spi_chipselect(struct
  		ath79_spi_wr(sp, AR71XX_SPI_REG_IOC, sp->ioc_base);
  	}
  
@@ -181,13 +203,16 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
  
 +	case ATH79_SPI_CS_TYPE_GPIO:
 +		/* SPI is normally active-low */
-+		gpio_set_value(cdata->cs_line, cs_high);
++		if (gpio_cansleep(cdata->cs_line))
++			gpio_set_value_cansleep(cdata->cs_line, cs_high);
++		else
++			gpio_set_value(cdata->cs_line, cs_high);
 +		break;
 +	}
  }
  
  static void ath79_spi_enable(struct ath79_spi *sp)
-@@ -120,24 +124,30 @@ static void ath79_spi_disable(struct ath
+@@ -120,24 +127,30 @@ static void ath79_spi_disable(struct ath
  static int ath79_spi_setup_cs(struct spi_device *spi)
  {
  	struct ath79_spi_controller_data *cdata;
@@ -222,7 +247,7 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
  	}
  
  	return status;
-@@ -145,9 +155,19 @@ static int ath79_spi_setup_cs(struct spi
+@@ -145,9 +158,19 @@ static int ath79_spi_setup_cs(struct spi
  
  static void ath79_spi_cleanup_cs(struct spi_device *spi)
  {
@@ -245,7 +270,7 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
  	}
  }
  
-@@ -155,6 +175,9 @@ static int ath79_spi_setup(struct spi_de
+@@ -155,6 +178,9 @@ static int ath79_spi_setup(struct spi_de
  {
  	int status = 0;
  
@@ -255,7 +280,7 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
  	if (spi->bits_per_word > 32)
  		return -EINVAL;
  
-@@ -215,6 +238,10 @@ static __devinit int ath79_spi_probe(str
+@@ -215,6 +241,10 @@ static __devinit int ath79_spi_probe(str
  	unsigned long rate;
  	int ret;
  
@@ -266,7 +291,7 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
  	master = spi_alloc_master(&pdev->dev, sizeof(*sp));
  	if (master == NULL) {
  		dev_err(&pdev->dev, "failed to allocate spi master\n");
-@@ -224,17 +251,10 @@ static __devinit int ath79_spi_probe(str
+@@ -224,17 +254,10 @@ static __devinit int ath79_spi_probe(str
  	sp = spi_master_get_devdata(master);
  	platform_set_drvdata(pdev, sp);
  

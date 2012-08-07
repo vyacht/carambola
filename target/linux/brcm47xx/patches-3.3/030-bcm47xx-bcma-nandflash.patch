@@ -1,7 +1,7 @@
 --- a/arch/mips/bcm47xx/Kconfig
 +++ b/arch/mips/bcm47xx/Kconfig
-@@ -24,6 +24,7 @@ config BCM47XX_BCMA
- 	select BCMA_DRIVER_MIPS
+@@ -25,6 +25,7 @@ config BCM47XX_BCMA
+ 	select BCMA_HOST_PCI if PCI
  	select BCMA_DRIVER_PCI_HOSTMODE if PCI
  	select BCMA_SFLASH
 +	select BCMA_NFLASH
@@ -115,7 +115,7 @@
 @@ -4,6 +4,7 @@
   *  Copyright (C) 2006 Michael Buesch <m@bues.ch>
   *  Copyright (C) 2010 Waldemar Brodkorb <wbx@openadk.org>
-  *  Copyright (C) 2010-2011 Hauke Mehrtens <hauke@hauke-m.de>
+  *  Copyright (C) 2010-2012 Hauke Mehrtens <hauke@hauke-m.de>
 + *  Copyright (C) 2011-2012 Tathagata Das <tathagata@alumnux.com>
   *
   *  This program is free software; you can redistribute  it and/or modify it
@@ -148,17 +148,17 @@
  static void bcm47xx_machine_restart(char *command)
  {
  	printk(KERN_ALERT "Please stand by while rebooting the system...\n");
-@@ -369,6 +384,9 @@ static void __init bcm47xx_register_bcma
+@@ -248,6 +263,9 @@ static void __init bcm47xx_register_bcma
  
  	if (bcm47xx_bus.bcma.bus.drv_cc.flash_type == BCMA_SFLASH)
  		bcm47xx_sflash_struct_bcma_init(&bcm47xx_sflash, &bcm47xx_bus.bcma.bus.drv_cc);
 +	
 +	if (bcm47xx_bus.bcma.bus.drv_cc.flash_type == BCMA_NFLASH)
 +		bcm47xx_nflash_struct_bcma_init(&bcm47xx_nflash, &bcm47xx_bus.bcma.bus.drv_cc);
- }
  
- static int __init bcm47xx_register_flash_bcma(void)
-@@ -383,6 +401,9 @@ static int __init bcm47xx_register_flash
+ 	bcm47xx_fill_bcma_boardinfo(&bcm47xx_bus.bcma.bus.boardinfo, NULL);
+ }
+@@ -264,6 +282,9 @@ static int __init bcm47xx_register_flash
  	case BCMA_SFLASH:
  		bcm47xx_sflash_dev.dev.platform_data = &bcm47xx_sflash;
  		return platform_device_register(&bcm47xx_sflash_dev);
@@ -239,7 +239,7 @@
  bcma-$(CONFIG_BCMA_DRIVER_MIPS)		+= driver_mips.o
 --- a/drivers/bcma/bcma_private.h
 +++ b/drivers/bcma/bcma_private.h
-@@ -47,6 +47,11 @@ u32 bcma_pmu_get_clockcpu(struct bcma_dr
+@@ -56,6 +56,11 @@ u32 bcma_pmu_get_clockcpu(struct bcma_dr
  int bcma_sflash_init(struct bcma_drv_cc *cc);
  #endif /* CONFIG_BCMA_SFLASH */
  
@@ -971,7 +971,7 @@
 +MODULE_DESCRIPTION("BCM47XX NAND flash driver");
 --- a/include/linux/bcma/bcma_driver_chipcommon.h
 +++ b/include/linux/bcma/bcma_driver_chipcommon.h
-@@ -400,6 +400,7 @@ struct bcma_chipcommon_pmu {
+@@ -436,6 +436,7 @@ struct bcma_chipcommon_pmu {
  enum bcma_flash_type {
  	BCMA_PFLASH,
  	BCMA_SFLASH,
@@ -979,7 +979,7 @@
  };
  
  struct bcma_pflash {
-@@ -416,6 +417,14 @@ struct bcma_sflash {
+@@ -452,6 +453,14 @@ struct bcma_sflash {
  };
  #endif /* CONFIG_BCMA_SFLASH */
  
@@ -994,7 +994,7 @@
  struct bcma_serial_port {
  	void *regs;
  	unsigned long clockspeed;
-@@ -441,6 +450,9 @@ struct bcma_drv_cc {
+@@ -477,6 +486,9 @@ struct bcma_drv_cc {
  #ifdef CONFIG_BCMA_SFLASH
  		struct bcma_sflash sflash;
  #endif /* CONFIG_BCMA_SFLASH */
@@ -1004,7 +1004,7 @@
  	};
  
  	int nr_serial_ports;
-@@ -505,4 +517,13 @@ int bcma_sflash_write(struct bcma_drv_cc
+@@ -542,4 +554,13 @@ int bcma_sflash_write(struct bcma_drv_cc
  int bcma_sflash_erase(struct bcma_drv_cc *cc, u32 offset);
  #endif /* CONFIG_BCMA_SFLASH */
  

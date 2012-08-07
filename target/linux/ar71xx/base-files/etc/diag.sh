@@ -33,6 +33,9 @@ get_status_led() {
 	alfa-nx)
 		status_led="alfa:green:led_8"
 		;;
+	ap136)
+		status_led="ap136:green:status"
+		;;
 	ap81)
 		status_led="ap81:green:status"
 		;;
@@ -81,7 +84,8 @@ get_status_led() {
 	nbg460n_550n_550nh)
 		status_led="nbg460n:green:power"
 		;;
-	om2p)
+	om2p | \
+	om2p-lc)
 		status_led="om2p:blue:power"
 		;;
 	pb44)
@@ -121,6 +125,7 @@ get_status_led() {
 	tl-wr941nd)
 		status_led="tp-link:green:system"
 		;;
+	tl-wdr4300 | \
 	tl-wr703n)
 		status_led="tp-link:blue:system"
 		;;
@@ -135,6 +140,9 @@ get_status_led() {
 	whr-hp-gn | \
 	wzr-hp-g300nh)
 		status_led="buffalo:green:router"
+		;;
+	wlae-ag300n)
+		status_led="buffalo:green:status"
 		;;
 	wzr-hp-g300nh2)
 		status_led="buffalo:red:diag"

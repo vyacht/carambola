@@ -113,7 +113,7 @@ define Image/BuildLoader
 	-rm -rf $(KDIR)/lzma-loader
 	$(LOADER_MAKE) LOADER=loader-$(1).$(2) KERNEL_CMDLINE="$(3)"\
 		LZMA_TEXT_START=0x80a00000 LOADADDR=0x80060000 \
-		LOADER_DATA="$(KDIR)/vmlinux.bin.lzma" \
+		LOADER_DATA="$(KDIR)/vmlinux.bin.lzma" BOARD="$(1)" \
 		compile loader.$(2)
 endef
 
@@ -121,7 +121,7 @@ define Image/BuildLoaderAlone
 	-rm -rf $(KDIR)/lzma-loader
 	$(LOADER_MAKE) LOADER=loader-$(1).$(2) KERNEL_CMDLINE="$(3)" \
 		LZMA_TEXT_START=0x80a00000 LOADADDR=0x80060000 \
-		FLASH_OFFS=$(4) FLASH_MAX=$(5) \
+		BOARD="$(1)" FLASH_OFFS=$(4) FLASH_MAX=$(5) \
 		compile loader.$(2)
 endef
 
@@ -425,13 +425,13 @@ endef
 define Image/Build/TPLINK-LZMA
 	$(call PatchKernelLzma,$(2),$(3))
 	-$(STAGING_DIR_HOST)/bin/mktplinkfw \
-		-H $(4) -W $(5) -F $(6) -N OpenWrt -V $(REVISION)\
+		-H $(4) -W $(5) -F $(6) -N OpenWrt -V $(REVISION) $(7) \
 		-k $(KDIR_TMP)/vmlinux-$(2).bin.lzma \
 		-r $(KDIR)/root.$(1) \
 		-a $(call rootfs_align,$(1)) -j \
 		-o $(call factoryname,$(1),$(2))
 	-$(STAGING_DIR_HOST)/bin/mktplinkfw \
-		-H $(4) -W $(5) -F $(6) -N OpenWrt -V $(REVISION) -s \
+		-H $(4) -W $(5) -F $(6) -N OpenWrt -V $(REVISION) $(7) -s \
 		-k $(KDIR_TMP)/vmlinux-$(2).bin.lzma \
 		-r $(KDIR)/root.$(1) \
 		-a $(call rootfs_align,$(1)) -j \
@@ -441,7 +441,7 @@ endef
 define Image/Build/TPLINK-LZMA/initramfs
 	$(call PatchKernelLzma,$(2),$(3))
 	-$(STAGING_DIR_HOST)/bin/mktplinkfw -c \
-		-H $(4) -W $(5) -F $(6) -N OpenWrt -V $(REVISION) -s \
+		-H $(4) -W $(5) -F $(6) -N OpenWrt -V $(REVISION) $(7) -s \
 		-k $(KDIR_TMP)/vmlinux-$(2).bin.lzma \
 		-o $(call imgname,$(1),$(2))-uImage.bin
 endef
@@ -655,6 +655,12 @@ define Image/Build/Profile/ALFAAP96
 	$(call Image/Build/Template/$(fs_128k)/$(1),AthLzma,alfa-ap96,$(alfa_ap96_cmdline),$(alfa_ap96_mtdlayout),2097152,13631488,RKuImage)
 endef
 
+all0258n_cmdline=board=ALL0258N console=ttyS0,115200
+all0258n_mtdlayout=mtdparts=spi0.0:256k(u-boot),64k(u-boot-env),1024k(kernel),5248k(rootfs),1536k(failsafe),64k(art),6272k@0x50000(firmware)
+define Image/Build/Profile/ALL0258N
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,all0258n,$(all0258n_cmdline),$(all0258n_mtdlayout),1048576,5373952,KRuImage)
+endef
+
 ap113_mtd_layout=64k(u-boot),3008k(rootfs),896k(uImage),64k(NVRAM),64k(ART),3904k@0x10000(firmware)
 ap113_cmdline=board=AP113 console=ttyS0,115200
 define Image/Build/Profile/AP113
@@ -673,6 +679,14 @@ endef
 ap121_mini_cmdline=board=AP121-MINI console=ttyATH0,115200
 define Image/Build/Profile/AP121MINI
 	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap121-mini,$(ap121_mini_cmdline),$(ap121_mtdlayout_4M),917504,2818048,RKuImage)
+endef
+
+ew-dorin_cmdline=board=EW-DORIN console=ttyATH0,115200
+ew-dorin-router_cmdline=board=EW-DORIN-ROUTER console=ttyATH0,115200
+ew-dorin_mtdlayout_4M=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),1024k(kernel),2688k(rootfs),64k(art),3712k@0x50000(firmware)
+define Image/Build/Profile/EWDORIN
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ew-dorin,$(ew-dorin_cmdline),$(ew-dorin_mtdlayout_4M),1048576,2752512,KRuImage)
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ew-dorin-router,$(ew-dorin-router_cmdline),$(ew-dorin_mtdlayout_4M),1048576,2752512,KRuImage)
 endef
 
 ap81_cmdline=board=AP81 console=ttyS0,115200
@@ -696,6 +710,13 @@ db120_mtdlayout=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,6336k(rootfs),1
 define Image/Build/Profile/DB120
 	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,db120,$(db120_cmdline),$(db120_mtdlayout),1441792,6488064,RKuImage)
 endef
+
+ap136_cmdline=board=AP136 console=ttyS0,115200
+ap136_mtdlayout=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,6336k(rootfs),1408k(kernel),64k(mib0),64k(art)ro,7744k@0x50000(firmware)
+define Image/Build/Profile/AP136
+	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,ap136,$(ap136_cmdline),$(ap136_mtdlayout),1441792,6488064,RKuImage)
+endef
+
 
 pb42_cmdline=board=PB42 console=ttyS0,115200
 define Image/Build/Profile/PB42
@@ -965,7 +986,13 @@ endef
 
 tlwr2543_cmdline=board=TL-WR2543N console=ttyS0,115200
 define Image/Build/Profile/TLWR2543
-	$(call Image/Build/Template/$(fs_64kraw)/$(1),TPLINK-LZMA,tl-wr2543n-v1,$(tlwr2543_cmdline),0x25430001,1,8Mlzma)
+	$(call Image/Build/Template/$(fs_64kraw)/$(1),TPLINK-LZMA,tl-wr2543n-v1,$(tlwr2543_cmdline),0x25430001,1,8Mlzma,-v 3.13.99)
+endef
+
+tlwdr4300_cmdline=board=TL-WDR4300 console=ttyS0,115200
+define Image/Build/Profile/TLWDR4300
+	$(call Image/Build/Template/$(fs_64kraw)/$(1),TPLINK-LZMA,tl-wdr4300-v1,$(tlwdr4300_cmdline),0x43000001,1,8Mlzma)
+	$(call Image/Build/Template/$(fs_64kraw)/$(1),TPLINK-LZMA,tl-wdr4310-v1,$(tlwdr4300_cmdline),0x43100001,1,8Mlzma)
 endef
 
 wndr3700_cmdline=board=WNDR3700 console=ttyS0,115200
@@ -1015,6 +1042,11 @@ define Image/Build/Profile/WHRHPGN
 	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,whr-hp-gn,$(whrhpgn_cmdline),$(whrhpg300n_mtdlayout),WHR-HP-GN)
 endef
 
+wlaeag300n_cmdline=board=WLAE-AG300N console=ttyS0,115200
+define Image/Build/Profile/WLAEAG300N
+	$(call Image/Build/Template/$(fs_64k)/$(1),WHRHPG300N,wlae-ag300n,$(wlaeag300n_cmdline),$(whrhpg300n_mtdlayout),WLAE-AG300N)
+endef
+
 wzrhpg300nh_cmdline=board=WZR-HP-G300NH console=ttyS0,115200
 define Image/Build/Profile/WZRHPG300NH
 	$(call Image/Build/Template/$(fs_128k)/$(1),WZRHPG30XNH,wzr-hp-g300nh,$(wzrhpg300nh_cmdline),WZR-HP-G300NH)
@@ -1046,11 +1078,6 @@ define Image/Build/Profile/ZCN1523H516
 	$(call Image/Build/Template/$(fs_64k)/$(1),Zcomax,zcn-1523h-5-16,$(zcn1523h516_cmdline))
 endef
 
-all0258n_cmdline=board=ALL0258N console=ttyS0,115200
-define Image/Build/Profile/ALL0258N
-	$(call Image/Build/Template/$(fs_64k)/$(1),AthLzma,all0258n,$(all0258n_cmdline),,917504,5505024,KRuImage)
-endef
-
 define Image/Build/Profile/Default
 	$(call Image/Build/Profile/ALFAAP96,$(1))
 	$(call Image/Build/Profile/ALFANX,$(1))
@@ -1058,6 +1085,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/AP113,$(1))
 	$(call Image/Build/Profile/AP121,$(1))
 	$(call Image/Build/Profile/AP121MINI,$(1))
+	$(call Image/Build/Profile/AP136,$(1))
 	$(call Image/Build/Profile/AP81,$(1))
 	$(call Image/Build/Profile/AP83,$(1))
 	$(call Image/Build/Profile/A02RBW300N,$(1))
@@ -1068,6 +1096,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/DIR615E4,$(1))
 	$(call Image/Build/Profile/DIR825B1,$(1))
 	$(call Image/Build/Profile/EAP7660D,$(1))
+	$(call Image/Build/Profile/EWDORIN,$(1))
 	$(call Image/Build/Profile/FR54RTR,$(1))
 	$(call Image/Build/Profile/HORNETUB,$(1))
 	$(call Image/Build/Profile/JA76PF,$(1))
@@ -1091,6 +1120,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/TLMR3420,$(1))
 	$(call Image/Build/Profile/TLWA701,$(1))
 	$(call Image/Build/Profile/TLWA901,$(1))
+	$(call Image/Build/Profile/TLWDR4300,$(1))
 	$(call Image/Build/Profile/TLWR703,$(1))
 	$(call Image/Build/Profile/TLWR740,$(1))
 	$(call Image/Build/Profile/TLWR741,$(1))
@@ -1111,6 +1141,7 @@ define Image/Build/Profile/Default
 	$(call Image/Build/Profile/WHRG301N,$(1))
 	$(call Image/Build/Profile/WHRHPG300N,$(1))
 	$(call Image/Build/Profile/WHRHPGN,$(1))
+	$(call Image/Build/Profile/WLAEAG300N,$(1))
 	$(call Image/Build/Profile/WZRHPG300NH,$(1))
 	$(call Image/Build/Profile/WZRHPG300NH2,$(1))
 	$(call Image/Build/Profile/WZRHPAG300H,$(1))
@@ -1146,7 +1177,7 @@ endef
 define Image/Prepare
 	gzip -9 -c $(KDIR)/vmlinux > $(KDIR)/vmlinux.bin.gz
 	$(call CompressLzma,$(KDIR)/vmlinux,$(KDIR)/vmlinux.bin.lzma)
-	$(call Image/Build/Profile/Default,loader)
+	$(call Image/Build/Profile/$(if $(CONFIG_IB),Default,$(PROFILE)),loader)
 endef
 
 define Image/Build

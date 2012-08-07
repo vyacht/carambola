@@ -1,5 +1,5 @@
 #!/bin/sh /etc/rc.common
-# Copyright (C) 2007 OpenWrt.org
+# Copyright (C) 2007-2012 OpenWrt.org
 
 START=60
 
@@ -7,6 +7,9 @@ SERVICE_USE_PID=1
 
 DNS_SERVERS=""
 DOMAIN=""
+
+ADD_LOCAL_DOMAIN=1
+ADD_LOCAL_HOSTNAME=1
 
 CONFIGFILE="/var/etc/dnsmasq.conf"
 
@@ -52,6 +55,10 @@ append_server() {
 	xappend "--server=$1"
 }
 
+append_address() {
+	xappend "--address=$1"
+}
+
 append_interface() {
 	local ifname=$(uci_get_state network "$1" ifname "$1")
 	xappend "--interface=$ifname"
@@ -88,6 +95,7 @@ dnsmasq() {
 	append_bool "$cfg" expandhosts "--expand-hosts"
 	append_bool "$cfg" enable_tftp "--enable-tftp"
 	append_bool "$cfg" nonwildcard "--bind-interfaces"
+	append_bool "$cfg" fqdn "--dhcp-fqdn"
 
 	append_parm "$cfg" dhcpscript "--dhcp-script"
 	append_parm "$cfg" cachesize "--cache-size"
@@ -99,6 +107,7 @@ dnsmasq() {
 	append_parm "$cfg" "domain" "--domain"
 	append_parm "$cfg" "local" "--server"
 	config_list_foreach "$cfg" "server" append_server
+	config_list_foreach "$cfg" "address" append_address
 	config_list_foreach "$cfg" "interface" append_interface
 	config_list_foreach "$cfg" "notinterface" append_notinterface
 	config_list_foreach "$cfg" "addnhosts" append_addnhosts
@@ -107,8 +116,12 @@ dnsmasq() {
 	append_parm "$cfg" "resolvfile" "--resolv-file"
 	append_parm "$cfg" "tftp_root" "--tftp-root"
 	append_parm "$cfg" "dhcp_boot" "--dhcp-boot"
+	append_parm "$cfg" "local_ttl" "--local-ttl"
 
 	config_get DOMAIN "$cfg" domain
+
+	config_get_bool ADD_LOCAL_DOMAIN "$cfg" add_local_domain 1
+	config_get_bool ADD_LOCAL_HOSTNAME "$cfg" add_local_hostname 1
 
 	config_get_bool readethers "$cfg" readethers
 	[ "$readethers" = "1" -a \! -e "/etc/ethers" ] && touch /etc/ethers
@@ -142,6 +155,8 @@ dnsmasq() {
 
 		config_list_foreach "$cfg" rebind_domain append_rebind_domain
 	}
+
+	dhcp_option_add "$cfg" "" 0
 
 	echo >> $CONFIGFILE
 }
@@ -362,7 +377,7 @@ dhcp_option_add() {
 
 	config_get dhcp_option "$cfg" dhcp_option
 	for o in $dhcp_option; do
-		xappend "--dhcp-option${force:+-force}=$networkid","$o"
+		xappend "--dhcp-option${force:+-force}=${networkid:+$networkid,}$o"
 	done
 
 }
@@ -487,14 +502,16 @@ start() {
 	echo >> $CONFIGFILE
 
 	# add own hostname
-	[ -z "$lanaddr" ] || {
+	[ $ADD_LOCAL_HOSTNAME -eq 1 ] && [ -n "$lanaddr" ] && {
 		local hostname="$(uci_get system.@system[0].hostname)"
 		dhcp_domain_add "" "${hostname:-OpenWrt}" "$lanaddr"
 	}
 
 	service_start /usr/sbin/dnsmasq -C $CONFIGFILE && {
 		rm -f /tmp/resolv.conf
-		[ -n "$DOMAIN" ] && echo "search $DOMAIN" >> /tmp/resolv.conf
+		[ $ADD_LOCAL_DOMAIN -eq 1 ] && [ -n "$DOMAIN" ] && {
+			echo "search $DOMAIN" >> /tmp/resolv.conf
+		}
 		DNS_SERVERS="$DNS_SERVERS 127.0.0.1"
 		for DNS_SERVER in $DNS_SERVERS ; do
 			echo "nameserver $DNS_SERVER" >> /tmp/resolv.conf

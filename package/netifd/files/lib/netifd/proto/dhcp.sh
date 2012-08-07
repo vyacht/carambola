@@ -18,11 +18,12 @@ proto_dhcp_setup() {
 	local config="$1"
 	local iface="$2"
 
+	local ipaddr hostname clientid vendorid broadcast reqopts
 	json_get_vars ipaddr hostname clientid vendorid broadcast reqopts
 
 	local opt dhcpopts
 	for opt in $reqopts; do
-		append dhcpopts "-O opt"
+		append dhcpopts "-O $opt"
 	done
 
 	[ "$broadcast" = 1 ] && broadcast="-O broadcast" || broadcast=
@@ -34,7 +35,7 @@ proto_dhcp_setup() {
 		-f -t 0 -i "$iface" \
 		${ipaddr:+-r $ipaddr} \
 		${hostname:+-H $hostname} \
-		${clientid:+-c $clientid} \
+		${clientid:+-x 0x3d:${clientid//:/}} \
 		${vendorid:+-V $vendorid} \
 		$broadcast $dhcpopts
 }

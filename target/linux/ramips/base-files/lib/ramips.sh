@@ -47,8 +47,14 @@ ramips_board_name() {
 	machine=$(awk 'BEGIN{FS="[ \t]+:[ \t]"} /machine/ {print $2}' /proc/cpuinfo)
 
 	case "$machine" in
+	*"Edimax 3g-6200n")
+		name="3g-6200n"
+		;;
 	*"Allnet ALL0256N")
 		name="all0256n"
+		;;
+	*"Allnet ALL5002")
+		name="all5002"
 		;;
 	*"ARC FreeStation5")
 		name="freestation5"
@@ -74,6 +80,9 @@ ramips_board_name() {
 	*"DIR-600 B2")
 		name="dir-600-b2"
 		;;
+        *"DAP-1350")
+                name="dap-1350"
+                ;;
 	*"ESR-9753")
 		name="esr-9753"
 		;;
@@ -100,6 +109,9 @@ ramips_board_name() {
 		;;
 	*"Omnima MiniEMBWiFi")
 		name="omni-emb"
+		;;
+	*"Petatel PSR-680W"*)
+		name="psr-680w"
 		;;
 	*"PWH2004")
 		name="pwh2004"

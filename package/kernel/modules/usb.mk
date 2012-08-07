@@ -110,96 +110,6 @@ endef
 $(eval $(call KernelPackage,usb-ohci,1))
 
 
-define KernelPackage/musb-hdrc
-  TITLE:=Support for Mentor Graphics silicon dual role USB
-  KCONFIG:= \
-	CONFIG_USB_MUSB_HDRC \
-	CONFIG_MUSB_PIO_ONLY=n \
-	CONFIG_USB_MUSB_OTG=y \
-	CONFIG_USB_MUSB_DEBUG=y
-  DEPENDS:=@TARGET_omap24xx
-  FILES:=$(LINUX_DIR)/drivers/usb/musb/musb_hdrc.ko
-  AUTOLOAD:=$(call AutoLoad,46,musb_hdrc)
-  $(call AddDepends/usb)
-endef
-
-define KernelPackage/musb-hdrc/description
-  Kernel support for Mentor Graphics silicon dual role USB device.
-endef
-
-$(eval $(call KernelPackage,musb-hdrc))
-
-
-define KernelPackage/nop-usb-xceiv
-  TITLE:=Support for USB OTG NOP transceiver
-  KCONFIG:= CONFIG_NOP_USB_XCEIV
-  FILES:=$(LINUX_DIR)/drivers/usb/otg/nop-usb-xceiv.ko
-  AUTOLOAD:=$(call AutoLoad,45,nop-usb-xceiv)
-  $(call AddDepends/usb)
-endef
-
-define KernelPackage/nop-usb-xceiv/description
-  Support for USB OTG NOP transceiver
-endef
-
-$(eval $(call KernelPackage,nop-usb-xceiv))
-
-
-define KernelPackage/tusb6010
-  TITLE:=Support for TUSB 6010
-  KCONFIG:= \
-	CONFIG_USB_MUSB_TUSB6010 \
-	CONFIG_USB_TUSB6010=y
-  DEPENDS:=+kmod-musb-hdrc +kmod-nop-usb-xceiv
-  $(call AddDepends/usb)
-endef
-
-define KernelPackage/tusb6010/description
-  TUSB6010 support
-endef
-
-$(eval $(call KernelPackage,tusb6010))
-
-
-define KernelPackage/usb-tahvo
-  TITLE:=Support for Tahvo (Nokia n810) USB
-  KCONFIG:= \
-	CONFIG_CBUS_TAHVO_USB \
-	CONFIG_CBUS_TAHVO_USB_HOST_BY_DEFAULT=n \
-	CONFIG_USB_OHCI_HCD_OMAP1=y \
-	CONFIG_USB_GADGET_DEBUG_FS=n
-  DEPENDS:=@TARGET_omap24xx +kmod-tusb6010 +kmod-usb-gadget
-  FILES:=$(LINUX_DIR)/drivers/cbus/tahvo-usb.ko
-  AUTOLOAD:=$(call AutoLoad,45,tahvo-usb)
-  $(call AddDepends/usb)
-endef
-
-define KernelPackage/usb-tahvo/description
-  Kernel support for Nokia n810 USB OHCI controller.
-endef
-
-$(eval $(call KernelPackage,usb-tahvo))
-
-
-define KernelPackage/usb-isp116x-hcd
-  TITLE:=Support for the ISP116x USB Host Controller
-  DEPENDS:=@TARGET_ppc40x
-  KCONFIG:= \
-	CONFIG_USB_ISP116X_HCD \
-	CONFIG_USB_ISP116X_HCD_OF=y \
-	CONFIG_USB_ISP116X_HCD_PLATFORM=n
-  FILES:=$(LINUX_DIR)/drivers/usb/host/isp116x-hcd.ko
-  AUTOLOAD:=$(call AutoLoad,50,isp116x-hcd)
-  $(call AddDepends/usb)
-endef
-
-define KernelPackage/usb-isp116x-hcd/description
-  Kernel support for the ISP116X USB Host Controller
-endef
-
-$(eval $(call KernelPackage,usb-isp116x-hcd))
-
-
 define KernelPackage/usb2
   TITLE:=Support for USB2 controllers
   DEPENDS:=+TARGET_brcm47xx:kmod-usb-brcm47xx
@@ -956,39 +866,34 @@ endef
 $(eval $(call KernelPackage,usb-test))
 
 
-define KernelPackage/usb-rt305x-dwc_otg
-  TITLE:=RT305X USB controller driver
-  DEPENDS:=@TARGET_ramips_rt305x
+define KernelPackage/usbip
+  TITLE := USB-over-IP kernel support
   KCONFIG:= \
-	CONFIG_DWC_OTG \
-	CONFIG_DWC_OTG_HOST_ONLY=y \
-	CONFIG_DWC_OTG_DEVICE_ONLY=n \
-	CONFIG_DWC_OTG_DEBUG=n
-  FILES:=$(LINUX_DIR)/drivers/usb/dwc_otg/dwc_otg.ko
-  AUTOLOAD:=$(call AutoLoad,54,dwc_otg,1)
+	CONFIG_USBIP_CORE \
+	CONFIG_USBIP_DEBUG=n
+  FILES:=$(LINUX_DIR)/drivers/staging/usbip/usbip-core.ko
+  AUTOLOAD:=$(call AutoLoad,90,usbip-core)
   $(call AddDepends/usb)
 endef
+$(eval $(call KernelPackage,usbip))
 
-define KernelPackage/usb-rt305x-dwc_otg/description
-  This driver provides USB Device Controller support for the
-  Synopsys DesignWare USB OTG Core used in the Ralink RT305X SoCs.
-endef
-
-$(eval $(call KernelPackage,usb-rt305x-dwc_otg))
-
-define KernelPackage/usb-brcm47xx
-  SUBMENU:=$(USB_MENU)
-  TITLE:=Support for USB on bcm47xx
-  DEPENDS:=@USB_SUPPORT @TARGET_brcm47xx
-  KCONFIG:= \
-  	CONFIG_USB_HCD_BCMA \
-  	CONFIG_USB_HCD_SSB
-  FILES:= \
-  	$(LINUX_DIR)/drivers/usb/host/bcma-hcd.ko \
-  	$(LINUX_DIR)/drivers/usb/host/ssb-hcd.ko
-  AUTOLOAD:=$(call AutoLoad,19,bcma-hcd ssb-hcd,1)
+define KernelPackage/usbip-client
+  TITLE := USB-over-IP client driver
+  DEPENDS := +kmod-usbip
+  KCONFIG := CONFIG_USBIP_VHCI_HCD
+  FILES := $(LINUX_DIR)/drivers/staging/usbip/vhci-hcd.$(LINUX_KMOD_SUFFIX)
+  AUTOLOAD := $(call AutoLoad,95,vhci-hcd)
   $(call AddDepends/usb)
 endef
+$(eval $(call KernelPackage,usbip-client))
 
-$(eval $(call KernelPackage,usb-brcm47xx))
-
+define KernelPackage/usbip-server
+$(call KernelPackage/usbip/Default)
+  TITLE := USB-over-IP host driver
+  DEPENDS := +kmod-usbip
+  KCONFIG := CONFIG_USBIP_HOST
+  FILES := $(LINUX_DIR)/drivers/staging/usbip/usbip-host.ko
+  AUTOLOAD := $(call AutoLoad,95,usbip-host)
+  $(call AddDepends/usb)
+endef
+$(eval $(call KernelPackage,usbip-server))

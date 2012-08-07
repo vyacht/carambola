@@ -23,6 +23,9 @@
 #include <pwd.h>
 #include <sys/stat.h>
 
+#include <libubox/uloop.h>
+
+
 #ifdef HAVE_SHADOW
 #include <shadow.h>
 #endif
@@ -112,7 +115,9 @@ struct path_info * uh_path_lookup(struct client *cl, const char *url);
 struct listener * uh_listener_add(int sock, struct config *conf);
 struct listener * uh_listener_lookup(int sock);
 
-struct client * uh_client_add(int sock, struct listener *serv);
+struct client * uh_client_add(int sock, struct listener *serv,
+                              struct sockaddr_in6 *peer);
+
 struct client * uh_client_lookup(int sock);
 
 #define uh_client_error(cl, code, status, ...) do { \
@@ -123,7 +128,8 @@ struct client * uh_client_lookup(int sock);
 void uh_client_shutdown(struct client *cl);
 void uh_client_remove(struct client *cl);
 
-#define uh_client_gc() uh_client_remove(NULL)
+void uh_ufd_add(struct uloop_fd *u, uloop_fd_handler h, unsigned int ev);
+void uh_ufd_remove(struct uloop_fd *u);
 
 
 #ifdef HAVE_CGI

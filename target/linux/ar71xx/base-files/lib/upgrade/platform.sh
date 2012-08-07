@@ -82,6 +82,7 @@ platform_check_image() {
 	ap113 | \
 	ap121 | \
 	ap121-mini | \
+	ap136 | \
 	ap96 | \
 	db120 | \
 	hornet-ub | \
@@ -99,6 +100,8 @@ platform_check_image() {
 	dir-615-c1 | \
 	dir-615-e4 | \
 	dir-825-b1 | \
+	ew-dorin | \
+	ew-dorin-router | \
 	mzk-w04nu | \
 	mzk-w300nh | \
 	tew-632brp | \
@@ -116,6 +119,7 @@ platform_check_image() {
 	whr-g301n | \
 	whr-hp-g300n | \
 	whr-hp-gn | \
+	wlae-ag300n | \
 	nbg460n_550n_550nh | \
 	unifi )
 		[ "$magic" != "2705" ] && {
@@ -124,12 +128,18 @@ platform_check_image() {
 		}
 		return 0
 		;;
+	om2p | \
+	om2p-lc)
+		platform_check_image_om2p "$magic_long" "$1" && return 0
+		return 1
+		;;
 	tl-mr11u | \
 	tl-mr3020 | \
 	tl-mr3220 | \
 	tl-mr3420 | \
 	tl-wa901nd | \
 	tl-wa901nd-v2 | \
+	tl-wdr4300 | \
 	tl-wr703n | \
 	tl-wr741nd | \
 	tl-wr741nd-v4 | \
@@ -220,6 +230,10 @@ platform_do_upgrade() {
 		;;
 	all0258n )
 		platform_do_upgrade_all0258n "$ARGV"
+		;;
+	om2p | \
+	om2p-lc)
+		platform_do_upgrade_om2p "$ARGV"
 		;;
 	*)
 		default_do_upgrade "$ARGV"

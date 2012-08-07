@@ -21,6 +21,7 @@ enum ramips_mach_type {
 	RAMIPS_MACH_WZR_AGL300NH,	/* Buffalo WZR-AGL300NH */
 
 	/* RT3050 based machines */
+	RAMIPS_MACH_3G_6200N,		/* Edimax 3G-6200N */
 	RAMIPS_MACH_ALL0256N,		/* Allnet ALL0256N */
 	RAMIPS_MACH_DIR_300_B1,		/* D-Link DIR-300 B1 */
 	RAMIPS_MACH_DIR_600_B1,		/* D-Link DIR-600 B1 */
@@ -35,6 +36,7 @@ enum ramips_mach_type {
 	/* RT3052 based machines */
 	RAMIPS_MACH_ARGUS_ATP52B,	/* Argus ATP-52B */
 	RAMIPS_MACH_BC2,		/* NexAira BC2 */
+	RAMIPS_MACH_DAP_1350,		/* D-Link DAP-1350 */
 	RAMIPS_MACH_ESR_9753,		/* Senao / EnGenius ESR-9753*/
 	RAMIPS_MACH_F5D8235_V2,         /* Belkin F5D8235 v2 */
 	RAMIPS_MACH_FONERA20N,		/* La Fonera 2.0N */
@@ -43,6 +45,7 @@ enum ramips_mach_type {
 	RAMIPS_MACH_MOFI3500_3GN,	/* MoFi Network MOFI3500-3GN */
 	RAMIPS_MACH_NBG_419N,		/* ZyXEL NBG-419N */
 	RAMIPS_MACH_OMNI_EMB,         	/* Omnima MiniEMBWiFi */
+	RAMIPS_MACH_PSR_680W,		/* Petatel PSR-680W Wireless 3G Router*/
 	RAMIPS_MACH_PWH2004,		/* Prolink 2004H / Abocom 5205 */
 	RAMIPS_MACH_SL_R7205,		/* Skylink SL-R7205 Wireless 3G Router*/
 	RAMIPS_MACH_V22RW_2X2,		/* Ralink AP-RT3052-V22RW-2X2 */
@@ -57,6 +60,9 @@ enum ramips_mach_type {
 	RAMIPS_MACH_XDXRN502J,          /* unknown XDX-RN502J */
 	RAMIPS_MACH_UR_336UN,		/* UPVEL ROUTER */
 	RAMIPS_MACH_CARAMBOLA,		/* "Carambola" */
+	
+	/* RT3352 based machines */
+	RAMIPS_MACH_ALL5002,		/* Allnet ALL5002 */
 
 	/* RT3662 based machines */
 	RAMIPS_MACH_RT_N56U,		/* Asus RT-N56U */
