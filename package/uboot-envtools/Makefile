@@ -26,20 +26,6 @@ define Package/uboot-envtools
   CATEGORY:=Utilities
   TITLE:=read/modify U-Boot bootloader environment
   URL:=http://www.denx.de/wiki/U-Boot
-  MENU:=1
-endef
-
-define Package/uboot-envtools/config
-	menu "Configuration"
-	depends on PACKAGE_uboot-envtools
-
-	config PACKAGE_uboot-envtools_setenv_symlink
-		bool "Create fw_setenv symlink"
-		default n
-		help
-		With this option selected you will be able to edit U-Boot bootloader environment.
- 
-	endmenu
 endef
 
 define Package/uboot-envtools/description
@@ -60,9 +46,7 @@ endef
 define Package/uboot-envtools/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/fw_printenv $(1)/usr/sbin
-ifneq ($(CONFIG_PACKAGE_uboot-envtools_setenv_symlink),)
 	ln -s fw_printenv $(1)/usr/sbin/fw_setenv
-endif
 	$(INSTALL_DIR) $(1)/lib
 	$(INSTALL_DATA) ./files/uboot-envtools.sh $(1)/lib
 ifneq ($(CONFIG_TARGET_ar71xx),)
@@ -76,6 +60,10 @@ endif
 ifneq ($(CONFIG_TARGET_lantiq),)
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_BIN) ./files/lantiq $(1)/etc/uci-defaults/uboot-envtools
+endif
+ifneq ($(CONFIG_TARGET_ramips),)
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/ramips $(1)/etc/uci-defaults/uboot-envtools
 endif
 endef
 

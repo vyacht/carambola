@@ -33,6 +33,9 @@ get_status_led() {
 	alfa-nx)
 		status_led="alfa:green:led_8"
 		;;
+	all0305)
+		status_led="eap7660d:green:ds4"
+		;;
 	ap136)
 		status_led="ap136:green:status"
 		;;
@@ -109,6 +112,9 @@ get_status_led() {
 	tew-673gru)
 		status_led="trendnet:blue:wps"
 		;;
+	tew-712br)
+		status_led="trendnet:green:power"
+		;;
 	tl-mr3020)
 		status_led="tp-link:green:wps"
 		;;
@@ -122,6 +128,7 @@ get_status_led() {
 	tl-wr741nd-v4 | \
 	tl-wr841n-v1 | \
 	tl-wr841n-v7 | \
+	tl-wr841n-v8 | \
 	tl-wr941nd)
 		status_led="tp-link:green:system"
 		;;
@@ -144,6 +151,7 @@ get_status_led() {
 	wlae-ag300n)
 		status_led="buffalo:green:status"
 		;;
+	wzr-hp-ag300h | \
 	wzr-hp-g300nh2)
 		status_led="buffalo:red:diag"
 		;;

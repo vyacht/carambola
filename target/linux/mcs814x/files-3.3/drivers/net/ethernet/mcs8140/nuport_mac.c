@@ -112,22 +112,22 @@
 
 static inline u32 nuport_mac_readl(void __iomem *reg)
 {
-	return __raw_readl(reg);
+	return readl_relaxed(reg);
 }
 
 static inline u8 nuport_mac_readb(void __iomem *reg)
 {
-	return __raw_readb(reg);
+	return readb_relaxed(reg);
 }
 
 static inline void nuport_mac_writel(u32 value, void __iomem *reg)
 {
-	__raw_writel(value, reg);
+	writel_relaxed(value, reg);
 }
 
 static inline void nuport_mac_writeb(u8 value, void __iomem *reg)
 {
-	__raw_writel(value, reg);
+	writel_relaxed(value, reg);
 }
 
 /* MAC private data */
@@ -256,6 +256,8 @@ static int nuport_mac_start_tx_dma(struct nuport_mac_priv *priv,
 
 	priv->tx_addr = dma_map_single(&priv->pdev->dev, skb->data,
 			skb->len, DMA_TO_DEVICE);
+	if (dma_mapping_error(&priv->pdev->dev, priv->tx_addr))
+		return -ENOMEM;
 
 	/* enable enhanced mode */
 	nuport_mac_writel(TX_DMA_ENH_ENABLE, TX_DMA_ENH);
@@ -297,6 +299,8 @@ static int nuport_mac_start_rx_dma(struct nuport_mac_priv *priv,
 
 	priv->rx_addr = dma_map_single(&priv->pdev->dev, skb->data,
 				RX_ALLOC_SIZE, DMA_FROM_DEVICE);
+	if (dma_mapping_error(&priv->pdev->dev, priv->rx_addr))
+		return -ENOMEM;
 
 	nuport_mac_writel(priv->rx_addr, RX_BUFFER_ADDR);
 	wmb();
@@ -684,6 +688,10 @@ static void nuport_mac_free_rx_ring(struct nuport_mac_priv *priv)
 		dev_kfree_skb(priv->rx_skb[i]);
 		priv->rx_skb[i] = NULL;
 	}
+
+	if (priv->rx_addr)
+		dma_unmap_single(&priv->pdev->dev, priv->rx_addr, RX_ALLOC_SIZE,
+				DMA_TO_DEVICE);
 }
 
 static void nuport_mac_read_mac_address(struct net_device *dev)
@@ -757,7 +765,12 @@ static int nuport_mac_open(struct net_device *dev)
 		goto out_emac_clk;
 	}
 
-	phy_start(priv->phydev);
+	ret = request_irq(priv->tx_irq, &nuport_mac_tx_interrupt,
+				0, dev->name, dev);
+	if (ret) {
+		netdev_err(dev, "unable to request rx interrupt\n");
+		goto out_link_irq;
+	}
 
 	/* Enable link interrupt monitoring for our PHY address */
 	reg = LINK_INT_EN | (priv->phydev->addr << LINK_PHY_ADDR_SHIFT);
@@ -771,14 +784,7 @@ static int nuport_mac_open(struct net_device *dev)
 	nuport_mac_writel(LINK_POLL_MASK, LINK_INT_POLL_TIME);
 	spin_unlock_irqrestore(&priv->lock, flags);
 
-	ret = request_irq(priv->tx_irq, &nuport_mac_tx_interrupt,
-				0, dev->name, dev);
-	if (ret) {
-		netdev_err(dev, "unable to request rx interrupt\n");
-		goto out_link_irq;
-	}
-
-	napi_enable(&priv->napi);
+	phy_start(priv->phydev);
 
 	ret = request_irq(priv->rx_irq, &nuport_mac_rx_interrupt,
 				0, dev->name, dev);
@@ -801,7 +807,13 @@ static int nuport_mac_open(struct net_device *dev)
 	nuport_mac_reset_rx_dma(priv);
 
 	/* Start RX DMA */
-	return nuport_mac_start_rx_dma(priv, priv->rx_skb[0]);
+	spin_lock_irqsave(&priv->lock, flags);
+	ret = nuport_mac_start_rx_dma(priv, priv->rx_skb[0]);
+	spin_unlock_irqrestore(&priv->lock, flags);
+
+	napi_enable(&priv->napi);
+
+	return ret;
 
 out_rx_skb:
 	nuport_mac_free_rx_ring(priv);
@@ -817,9 +829,14 @@ out_emac_clk:
 
 static int nuport_mac_close(struct net_device *dev)
 {
+	u32 reg;
 	struct nuport_mac_priv *priv = netdev_priv(dev);
 
 	spin_lock_irq(&priv->lock);
+	reg = nuport_mac_readl(CTRL_REG);
+	reg &= ~(RX_ENABLE | TX_ENABLE);
+	nuport_mac_writel(reg, CTRL_REG);
+
 	napi_disable(&priv->napi);
 	netif_stop_queue(dev);
 

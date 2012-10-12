@@ -105,6 +105,7 @@ TARGET_ROOTFS_DIR?=$(if $(call qstrip,$(CONFIG_TARGET_ROOTFS_DIR)),$(call qstrip
 TARGET_DIR:=$(TARGET_ROOTFS_DIR)/root-$(BOARD)
 STAGING_DIR_ROOT:=$(STAGING_DIR)/root-$(BOARD)
 BUILD_LOG_DIR:=$(TOPDIR)/logs
+PKG_INFO_DIR := $(STAGING_DIR)/pkginfo
 
 TARGET_PATH:=$(STAGING_DIR_HOST)/bin:$(subst $(space),:,$(filter-out .,$(filter-out ./,$(subst :,$(space),$(PATH)))))
 TARGET_CFLAGS:=$(TARGET_OPTIMIZATION)$(if $(CONFIG_DEBUG), -g3)
@@ -121,6 +122,10 @@ LIBGCC_S=$(if $(wildcard $(TOOLCHAIN_DIR)/lib/libgcc_s.so),-L$(TOOLCHAIN_DIR)/li
 endif
 LIBRPC=-lrpc
 LIBRPC_DEPENDS=+librpc
+
+ifneq ($(findstring $(ARCH) , mips64 x86_64 ),)
+  LIB_SUFFIX:=64
+endif
 
 ifndef DUMP
   ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
@@ -169,11 +174,13 @@ PKG_CONFIG:=$(STAGING_DIR_HOST)/bin/pkg-config
 export PKG_CONFIG
 
 HOSTCC:=gcc
-HOSTCC_NOCACHE:=$(HOSTCC)
-HOST_CFLAGS:=-O2 -I$(STAGING_DIR_HOST)/include
+HOST_CPPFLAGS:=-I$(STAGING_DIR_HOST)/include
+HOST_CFLAGS:=-O2 $(HOST_CPPFLAGS)
 HOST_LDFLAGS:=-L$(STAGING_DIR_HOST)/lib
 
 TARGET_CC:=$(TARGET_CROSS)gcc
+TARGET_AR:=$(TARGET_CROSS)ar
+TARGET_RANLIB:=$(TARGET_CROSS)ranlib
 TARGET_CXX:=$(if $(CONFIG_INSTALL_LIBSTDCPP),$(TARGET_CROSS)g++,no)
 KPATCH:=$(SCRIPT_DIR)/patch-kernel.sh
 SED:=$(STAGING_DIR_HOST)/bin/sed -i -e

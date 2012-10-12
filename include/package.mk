@@ -13,13 +13,18 @@ PKG_BUILD_DIR ?= $(BUILD_DIR)/$(PKG_NAME)$(if $(PKG_VERSION),-$(PKG_VERSION))
 PKG_INSTALL_DIR ?= $(PKG_BUILD_DIR)/ipkg-install
 PKG_MD5SUM ?= unknown
 PKG_BUILD_PARALLEL ?=
-PKG_INFO_DIR := $(STAGING_DIR)/pkginfo
+
+ifneq ($(CONFIG_PKG_BUILD_USE_JOBSERVER),)
+  MAKE_J:=$(if $(MAKE_JOBSERVER),$(MAKE_JOBSERVER) -j)
+else
+  MAKE_J:=-j$(CONFIG_PKG_BUILD_JOBS)
+endif
 
 ifeq ($(strip $(PKG_BUILD_PARALLEL)),0)
 PKG_JOBS?=-j1
 else
 PKG_JOBS?=$(if $(PKG_BUILD_PARALLEL)$(CONFIG_PKG_DEFAULT_PARALLEL),\
-	$(if $(CONFIG_PKG_BUILD_PARALLEL),-j$(CONFIG_PKG_BUILD_JOBS),-j1),-j1)
+	$(if $(CONFIG_PKG_BUILD_PARALLEL),$(MAKE_J),-j1),-j1)
 endif
 
 include $(INCLUDE_DIR)/prereq.mk
@@ -45,6 +50,8 @@ ifneq ($(if $(CONFIG_SRC_TREE_OVERRIDE),$(wildcard ./git-src)),)
   USE_GIT_TREE:=1
   QUILT:=1
 endif
+
+PKG_DIR_NAME:=$(lastword $(subst /,$(space),$(CURDIR)))
 
 include $(INCLUDE_DIR)/download.mk
 include $(INCLUDE_DIR)/quilt.mk
@@ -242,6 +249,14 @@ Build/Install=$(if $(PKG_INSTALL),$(call Build/Install/Default,))
 Build/Dist=$(call Build/Dist/Default,)
 Build/DistCheck=$(call Build/DistCheck/Default,)
 
+.NOTPARALLEL:
+
+.PHONY: prepare-package-install
+prepare-package-install:
+	@mkdir -p $(PKG_INFO_DIR)
+	@touch $(PKG_INFO_DIR)/$(PKG_DIR_NAME).install.clean
+	@echo "$(filter-out essential,$(PKG_FLAGS))" > $(PKG_INFO_DIR)/$(PKG_DIR_NAME).install.flags
+
 $(PACKAGE_DIR):
 	mkdir -p $@
 	
@@ -249,8 +264,8 @@ dumpinfo:
 download:
 prepare:
 configure:
-compile:
-install:
+compile: prepare-package-install
+install: compile
 clean-staging: FORCE
 	rm -f $(STAMP_INSTALLED)
 	@-(\
