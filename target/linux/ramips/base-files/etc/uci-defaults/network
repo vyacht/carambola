@@ -99,7 +99,9 @@ ramips_setup_interfaces()
 	wli-tx4-ag300n)
 		ucidef_set_interface_lan "eth0"
 		;;
-
+	carambola)
+		ramips_setup_rt3x5x_vlans
+		;;
 	*)
 		RT3X5X=`cat /proc/cpuinfo | egrep "(RT3.5|RT5350)"`
 		if [ -n "${RT3X5X}" ]; then
@@ -120,6 +122,7 @@ ramips_setup_macs()
 	case $board in
 	all0256n | \
 	all5002 | \
+	carambola | \
 	dir-615-h1)
 		lan_mac=$(ramips_get_mac_binary factory 40)
 		;;
@@ -182,7 +185,6 @@ ramips_setup_macs()
 		;;
 
 	all0239-3g | \
-	carambola | \
 	w502u)
 		lan_mac=$(ramips_get_mac_binary factory 40)
 		wan_mac=$(ramips_get_mac_binary factory 46)
