@@ -581,6 +581,7 @@ config wifi-device  radio$devidx
 	option channel  ${channel}
 	option macaddr	$(cat /sys/class/ieee80211/${dev}/macaddress)
 	option hwmode	11${mode_11n}${mode_band}
+	option txpower	10
 $ht_capab
 	# REMOVE THIS LINE TO ENABLE WIFI:
 	option disabled 1
