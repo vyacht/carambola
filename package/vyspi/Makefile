@@ -14,7 +14,7 @@ PKG_RELEASE:=1
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/vyspi
-  SUBMENU:=vYacht
+  CATEGORY:=VYACHT
   TITLE:=Custom vYacht Based SPI module
   FILES:=$(PKG_BUILD_DIR)/vyspi.ko
   KCONFIG:=CONFIG_SPI_VYSPI \

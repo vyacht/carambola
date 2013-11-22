@@ -14,8 +14,7 @@ PKG_RELEASE:=$(LINUX_VERSION)
 include $(INCLUDE_DIR)/package.mk
 
 define Package/vyspi-test
-  SECTION:=utils
-  CATEGORY:=Utilities
+  CATEGORY:=VYACHT
   DEPENDS:=+kmod-vyspi
   TITLE:=SPI testing utility
   VERSION:=$(LINUX_VERSION)-$(PKG_RELEASE)

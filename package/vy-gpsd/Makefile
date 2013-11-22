@@ -37,7 +37,7 @@ endef
 define Package/vy-gpsd
   $(call Package/vy-gpsd/Default)
   SECTION:=net
-  CATEGORY:=Network
+  CATEGORY:=VYACHT
   DEPENDS+= +libcap +libncurses
   TITLE:=An interface daemon for GPS receivers
 endef

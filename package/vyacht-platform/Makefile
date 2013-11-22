@@ -14,7 +14,7 @@ PKG_RELEASE:=1
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/vyacht-platform
-  SUBMENU:=vYacht
+  CATEGORY:=VYACHT
   TITLE:=Custom vYacht Platform module
   FILES:=$(PKG_BUILD_DIR)/vyacht-platform.ko
   KCONFIG:=   

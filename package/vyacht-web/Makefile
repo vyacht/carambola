@@ -15,7 +15,7 @@ include $(INCLUDE_DIR)/package.mk
 
 define Package/vyacht-web
 	SECTION:=net
-	CATEGORY:=Network
+	CATEGORY:=VYACHT
         DEPENDS:=+luci-theme-base +luci-mod-admin-core +luci-theme-openwrt +iomode
 	TITLE:=allows easy web based configuartion of an vYachtWiFi Router
 	MAINTAINER:=Bernd Ocklin <bernd@vyacht.net>
