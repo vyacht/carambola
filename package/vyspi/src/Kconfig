@@ -1,0 +1,3 @@
+config SPI_VYSPI
+	tristate "Custom vyacht SPI based driver"
+	depends on SPI

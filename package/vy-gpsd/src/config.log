@@ -1,0 +1,389 @@
+file /home/bo/prg/carambola/package/vy-gpsd/src/SConstruct,line 410:
+	Configure(confdir = .sconf_temp)
+scons: Configure: Checking if compiler accepts -Wextra ...
+.sconf_temp/conftest_0.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_0.o -c -D_GNU_SOURCE -Wextra -O2 .sconf_temp/conftest_0.c
+gcc -o .sconf_temp/conftest_0 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_0.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wall ...
+.sconf_temp/conftest_1.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_1.o -c -D_GNU_SOURCE -Wextra -Wall -O2 .sconf_temp/conftest_1.c
+.sconf_temp/conftest_1.c: In function 'main':
+.sconf_temp/conftest_1.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_1.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_1 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_1.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wno-uninitialized ...
+.sconf_temp/conftest_2.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_2.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -O2 .sconf_temp/conftest_2.c
+.sconf_temp/conftest_2.c: In function 'main':
+.sconf_temp/conftest_2.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_2.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_2 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_2.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wno-missing-field-initializers ...
+.sconf_temp/conftest_3.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_3.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -O2 .sconf_temp/conftest_3.c
+.sconf_temp/conftest_3.c: In function 'main':
+.sconf_temp/conftest_3.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_3.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_3 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_3.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wcast-align ...
+.sconf_temp/conftest_4.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_4.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -O2 .sconf_temp/conftest_4.c
+.sconf_temp/conftest_4.c: In function 'main':
+.sconf_temp/conftest_4.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_4.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_4 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_4.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wmissing-declarations ...
+.sconf_temp/conftest_5.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_5.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -O2 .sconf_temp/conftest_5.c
+.sconf_temp/conftest_5.c: In function 'main':
+.sconf_temp/conftest_5.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_5.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_5 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_5.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wmissing-prototypes ...
+.sconf_temp/conftest_6.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_6.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -O2 .sconf_temp/conftest_6.c
+.sconf_temp/conftest_6.c: In function 'main':
+.sconf_temp/conftest_6.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_6.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_6 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_6.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wstrict-prototypes ...
+.sconf_temp/conftest_7.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_7.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -O2 .sconf_temp/conftest_7.c
+.sconf_temp/conftest_7.c: In function 'main':
+.sconf_temp/conftest_7.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_7.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_7 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_7.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wpointer-arith ...
+.sconf_temp/conftest_8.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_8.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -O2 .sconf_temp/conftest_8.c
+.sconf_temp/conftest_8.c: In function 'main':
+.sconf_temp/conftest_8.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_8.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_8 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_8.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking if compiler accepts -Wreturn-type ...
+.sconf_temp/conftest_9.c <-
+  |
+  |        int main(int argc, char **argv) {
+  |            return 0;
+  |        }
+  |    
+gcc -o .sconf_temp/conftest_9.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_9.c
+.sconf_temp/conftest_9.c: In function 'main':
+.sconf_temp/conftest_9.c:2:22: warning: unused parameter 'argc' [-Wunused-parameter]
+.sconf_temp/conftest_9.c:2:35: warning: unused parameter 'argv' [-Wunused-parameter]
+gcc -o .sconf_temp/conftest_9 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_9.o -L/usr/local/lib
+scons: Configure: yes
+
+scons: Configure: Checking for chrpath... 
+chrpath -v
+sh: chrpath: command not found
+scons: Configure: no
+
+scons: Configure: Checking whether the C++ compiler works
+.sconf_temp/conftest_11.cpp <-
+  |
+  |int main()
+  |{
+  |    return 0;
+  |}
+  |
+g++ -o .sconf_temp/conftest_11.o -c -O2 .sconf_temp/conftest_11.cpp
+scons: Configure: yes
+
+scons: Configure: Checking for ncurses... 
+pkg-config --exists 'ncurses'
+scons: Configure: yes
+
+scons: Configure: Checking for libusb-1.0... 
+pkg-config --exists 'libusb-1.0'
+scons: Configure: yes
+
+scons: Configure: Checking for C library librt... 
+.sconf_temp/conftest_14.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+gcc -o .sconf_temp/conftest_14.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_14.c
+.sconf_temp/conftest_14.c:5:1: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+gcc -o .sconf_temp/conftest_14 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_14.o -L. -L/usr/local/lib -lrt
+scons: Configure: yes
+
+scons: Configure: Checking for C library libcap... 
+.sconf_temp/conftest_15.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+gcc -o .sconf_temp/conftest_15.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_15.c
+.sconf_temp/conftest_15.c:5:1: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+gcc -o .sconf_temp/conftest_15 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_15.o -L. -L/usr/local/lib -lrt -lcap
+/usr/bin/ld: cannot find -lcap
+collect2: error: ld returned 1 exit status
+scons: Configure: no
+
+scons: Configure: Checking for bluez... 
+pkg-config --exists 'bluez'
+scons: Configure: no
+
+scons: Configure: Checking for C header file sys/timepps.h... 
+.sconf_temp/conftest_17.c <-
+  |
+  |#include <sys/timepps.h>
+  |
+  |
+gcc -o .sconf_temp/conftest_17.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_17.c
+.sconf_temp/conftest_17.c:2:25: fatal error: sys/timepps.h: No such file or directory
+compilation terminated.
+scons: Configure: no
+
+scons: Configure: Checking for C header file linux/can.h... 
+.sconf_temp/conftest_18.c <-
+  |#include <bits/sockaddr.h>
+  |
+  |#include <linux/can.h>
+  |
+  |
+gcc -o .sconf_temp/conftest_18.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_18.c
+scons: Configure: yes
+
+scons: Configure: Checking for C function daemon()... 
+.sconf_temp/conftest_19.c <-
+  |
+  |
+  |#include <assert.h>
+  |
+  |#ifdef __cplusplus
+  |extern "C"
+  |#endif
+  |char daemon();
+  |
+  |int main() {
+  |#if defined (__stub_daemon) || defined (__stub___daemon)
+  |  fail fail fail
+  |#else
+  |  daemon();
+  |#endif
+  |
+  |  return 0;
+  |}
+  |
+gcc -o .sconf_temp/conftest_19.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_19.c
+.sconf_temp/conftest_19.c:8:1: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+.sconf_temp/conftest_19.c:10:5: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+gcc -o .sconf_temp/conftest_19 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_19.o -L. -L/usr/local/lib -lrt
+scons: Configure: yes
+
+scons: Configure: Checking for C function strlcpy()... 
+.sconf_temp/conftest_20.c <-
+  |
+  |
+  |#include <assert.h>
+  |
+  |#ifdef __cplusplus
+  |extern "C"
+  |#endif
+  |char strlcpy();
+  |
+  |int main() {
+  |#if defined (__stub_strlcpy) || defined (__stub___strlcpy)
+  |  fail fail fail
+  |#else
+  |  strlcpy();
+  |#endif
+  |
+  |  return 0;
+  |}
+  |
+gcc -o .sconf_temp/conftest_20.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_20.c
+.sconf_temp/conftest_20.c:8:1: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+.sconf_temp/conftest_20.c:10:5: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+gcc -o .sconf_temp/conftest_20 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_20.o -L. -L/usr/local/lib -lrt
+.sconf_temp/conftest_20.o: In function `main':
+conftest_20.c:(.text.startup+0x7): undefined reference to `strlcpy'
+collect2: error: ld returned 1 exit status
+scons: Configure: no
+
+scons: Configure: Checking for C function strlcat()... 
+.sconf_temp/conftest_21.c <-
+  |
+  |
+  |#include <assert.h>
+  |
+  |#ifdef __cplusplus
+  |extern "C"
+  |#endif
+  |char strlcat();
+  |
+  |int main() {
+  |#if defined (__stub_strlcat) || defined (__stub___strlcat)
+  |  fail fail fail
+  |#else
+  |  strlcat();
+  |#endif
+  |
+  |  return 0;
+  |}
+  |
+gcc -o .sconf_temp/conftest_21.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_21.c
+.sconf_temp/conftest_21.c:8:1: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+.sconf_temp/conftest_21.c:10:5: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+gcc -o .sconf_temp/conftest_21 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_21.o -L. -L/usr/local/lib -lrt
+.sconf_temp/conftest_21.o: In function `main':
+conftest_21.c:(.text.startup+0x7): undefined reference to `strlcat'
+collect2: error: ld returned 1 exit status
+scons: Configure: no
+
+scons: Configure: Checking for C function clock_gettime()... 
+.sconf_temp/conftest_22.c <-
+  |
+  |
+  |#include <assert.h>
+  |
+  |#ifdef __cplusplus
+  |extern "C"
+  |#endif
+  |char clock_gettime();
+  |
+  |int main() {
+  |#if defined (__stub_clock_gettime) || defined (__stub___clock_gettime)
+  |  fail fail fail
+  |#else
+  |  clock_gettime();
+  |#endif
+  |
+  |  return 0;
+  |}
+  |
+gcc -o .sconf_temp/conftest_22.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_22.c
+.sconf_temp/conftest_22.c:8:1: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+.sconf_temp/conftest_22.c:10:5: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+gcc -o .sconf_temp/conftest_22 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_22.o -L. -L/usr/local/lib -lrt
+scons: Configure: yes
+
+scons: Configure: Checking for C function pselect()... 
+.sconf_temp/conftest_23.c <-
+  |
+  |
+  |#include <assert.h>
+  |
+  |#ifdef __cplusplus
+  |extern "C"
+  |#endif
+  |char pselect();
+  |
+  |int main() {
+  |#if defined (__stub_pselect) || defined (__stub___pselect)
+  |  fail fail fail
+  |#else
+  |  pselect();
+  |#endif
+  |
+  |  return 0;
+  |}
+  |
+gcc -o .sconf_temp/conftest_23.o -c -D_GNU_SOURCE -Wextra -Wall -Wno-uninitialized -Wno-missing-field-initializers -Wcast-align -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wpointer-arith -Wreturn-type -O2 .sconf_temp/conftest_23.c
+.sconf_temp/conftest_23.c:8:1: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+.sconf_temp/conftest_23.c:10:5: warning: function declaration isn't a prototype [-Wstrict-prototypes]
+gcc -o .sconf_temp/conftest_23 -Wl,-rpath=//usr/local/lib .sconf_temp/conftest_23.o -L. -L/usr/local/lib -lrt
+scons: Configure: yes
+
+scons: Configure: Checking that xsltproc can make man pages... 
+xsltproc --nonet --noout 'http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl' xmltest.xml
+Note: meta source : no *info/productname or alternative            foo
+Note: meta source : see http://docbook.sf.net/el/productname       foo
+Note: meta source : no refentry/refmeta/refmiscinfo@class=source   foo
+Note: meta source : see http://docbook.sf.net/el/refmiscinfo       foo
+Note: meta version: no *info/productnumber or alternative          foo
+Note: meta version: see http://docbook.sf.net/el/productnumber     foo
+Note: meta version: no refentry/refmeta/refmiscinfo@class=version  foo
+Note: meta version: see http://docbook.sf.net/el/refmiscinfo       foo
+Warn: meta source : no fallback for source, so inserted a fixme    foo
+Note: meta manual : no titled ancestor of refentry                 foo
+Note: meta manual : no refentry/refmeta/refmiscinfo@class=manual   foo
+Note: meta manual : see http://docbook.sf.net/el/refmiscinfo       foo
+Warn: meta manual : no fallback for manual, so inserted a fixme    foo
+Warn: meta author : no refentry/info/author                        foo
+Note: meta author : see http://docbook.sf.net/el/author            foo
+Warn: meta author : no author data, so inserted a fixme            foo
+Note: Writing foo.1
+scons: Configure: yes
+
+scons: Configure: Checking for QtNetwork... 
+pkg-config --exists 'QtNetwork'
+scons: Configure: yes
+
+

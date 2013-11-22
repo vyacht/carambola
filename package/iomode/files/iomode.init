@@ -1,0 +1,139 @@
+#!/bin/sh /etc/rc.common
+# (C) 2008 openwrt.org
+START=45
+
+NAME=iomode
+PROG=io
+
+# these first will be ignored here (all normal = 0)
+# RGMII_GPIO_MODE  bits   9 bitmask b1 0000 0000
+# SDRAM_GPIO_MODE  bits   8 bitmask b0 1000 0000
+# MDIO_GPIO_MODE   bits   7 bitmask b0 0100 0000
+# JTAG_GPIO_MODE   bits   6 bitmask b0 0000 0000
+
+# these are the ones that we care about
+# UARTL_GPIO_MODE  bits   5 bitmask b0 0010 0000
+# UARTF_SHARE_MODE bits 4:2 bitmask b0 0001 1100
+# SPI_GPIO_MODE    bits   1 bitmask b0 0000 0010
+# I2C_GPIO_MODE    bits   0 bitmask b0 0000 0001
+	  
+handle_gpio_purpose() {
+	
+        # ./io 0x10000060 0x01
+	local address="0x10000060"
+	local iomask=0x00
+	local gpio_modes=""
+
+        local uartf="$(uci_get iomode.@gpio_mode[0].uartf)"
+        local uartl="$(uci_get iomode.@gpio_mode[0].uartl)"
+        local spi="$(uci_get iomode.@gpio_mode[0].spi)"
+        local i2c="$(uci_get iomode.@gpio_mode[0].i2c)"
+
+	uartf="UARTF_GPIO" || $uartf
+	uartl="UARTL" || $uartl
+	spi="SPI" || $spi
+	i2c="I2C" || $i2c
+
+	echo "$NAME" "Reading iomode to $uartf, $uartl, $spi, $i2c"
+
+	if [ -n "$uartl" ]; then
+	    if [ $uartl = "GPIO" ]; then
+		# b0010 0000
+		# UARTL_GPIO_MODE = 1 -> GPIO 15 and 16 enabled
+		# UARTL_GPIO_MODE = 0 -> UARTL enabled
+		iomask=$(( $iomask | 0x20 ))
+	    fi
+	fi
+
+	if [ -n "$uartf" ]; then
+		case "$uartf" in
+		"UARTF")
+			# b0000 0000
+			iomask=$(( $iomask | 0x00 ))
+			;;
+		"PCM")
+			# b0000 0100
+			iomask=$(( $iomask | 0x04 ))
+			;;
+		"PCM_I2C")
+			# b0000 1000
+			iomask=$(( $iomask | 0x08 ))
+			;;
+		"I2C")
+			# b0000 1100
+			iomask=$(( $iomask | 0x0c ))
+			;;
+		"PCM_GPIO")
+			# b0001 0000
+			iomask=$(( $iomask | 0x10 ))
+			;;
+		"UARTF_GPIO")
+			# b0001 0100 - UARTF TX&RX with GPIO
+			iomask=$(( $iomask | 0x14 ))
+			;;
+		"GPIO_I2C")
+			# b0001 1000
+			iomask=$(( $iomask | 0x18 ))
+			;;
+		"GPIO")
+			# b0001 1100 - all GPIO
+			iomask=$(( $iomask | 0x1c ))
+			;;
+		*)
+        		echo "$NAME" "No known io mode $uartf for second UARTF. Exiting."
+        		logger -t "$NAME" "No known io mode $uartf for second UARF. Exiting."
+        		exit 1
+			;;
+		esac
+	fi
+
+	if [ -n "$spi" ]; then
+	    if [ $spi = "GPIO" ]; then
+		# 1b0010
+		# SPI_GPIO_MODE = 1 -> GPIO 3 to 6 enabled
+		# SPI_GPIO_MODE = 0 -> SPI enabled
+		iomask=$(( $iomask | 0x02 ))
+	    fi
+	fi
+	if [ -n "$i2c" ]; then
+	    if [ $i2c = "GPIO" ]; then
+		# 1b0001
+		# I2C_GPIO_MODE = 1 -> GPIO 1 and 2 enabled
+		# I2C_GPIO_MODE = 0 -> I2C enabled
+		iomask=$(( $iomask | 0x01 ))
+	    fi
+	fi
+	
+	$PROG $address $iomask
+
+	txt="%s: setting iomode to uartl= %s, uartf= %s, spi= %s, i2c= %s (0x%02X)\n" 
+	printf "$txt" $NAME $uartl $uartf $spi $i2c $iomask
+	logger -t "$NAME" "Setting iomode to uartl= $uartl, uartf= $uartf, spi=$spi, i2c=$i2c ($iomask)"
+} 
+
+handle_device() {
+
+	local device=""
+	local speed=""
+        local cfg="$1"
+
+        config_get type "$cfg" TYPE
+
+	config_get device "$cfg" device
+	config_get speed "$cfg" speed
+	
+	echo "> setting speed for device: $device going to $speed" 
+	
+	[ -n "$speed" ] || speed=4800
+	
+	echo "setting speed for device: $device going to $speed" 
+	stty -F $device $speed
+}
+
+start() {
+	echo "start ..." 
+	config_load iomode
+	config_foreach handle_device 'dev'
+	handle_gpio_purpose
+} 
+

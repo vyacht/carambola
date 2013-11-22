@@ -1,0 +1,2 @@
+config VYACHT_PLATFORM
+	tristate "Custom vyacht platform device management"
