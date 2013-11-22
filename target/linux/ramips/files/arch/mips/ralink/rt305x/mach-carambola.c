@@ -23,9 +23,9 @@
 #include <linux/i2c.h>
 #include <linux/i2c-gpio.h>
 
-#include "devices.h"
+#include <linux/can/platform/mcp251x.h>
 
-#ifdef CONFIG_MTD_PARTITIONS
+#include "devices.h"
 
 #define CARAMBOLA_UBOOT_SIZE	0x030000 /*  192KB */
 #define CARAMBOLA_UBOOT_ENV	0x010000 /*   64KB */
@@ -61,15 +61,6 @@ static struct mtd_partition carambola_partitions[] = {
 		.size   = CARAMBOLA_KERNEL_SIZE + CARAMBOLA_ROOTFS_SIZE,
 	}
 };
-#endif /* CONFIG_MTD_PARTITIONS */
-
-static struct physmap_flash_data carambola_flash_data = {
-#ifdef CONFIG_MTD_PARTITIONS
-	.nr_parts	= ARRAY_SIZE(carambola_partitions),
-	.parts		= carambola_partitions,
-#endif
-};
-
 
 static int __init carambola_register_gpiodev(void)
 {
@@ -86,6 +77,14 @@ static int __init carambola_register_gpiodev(void)
 
        return 0;
 }
+
+static const struct mcp251x_platform_data mcp251x_info = {
+        .oscillator_frequency   = 16000000,
+        .board_specific_setup   = NULL,
+//        .irq_flags              = 0,
+        .power_enable           = NULL,
+        .transceiver_enable     = NULL,
+};
 
 static struct i2c_gpio_platform_data carambola_i2c_gpio_data = {
 	.sda_pin        = 1,
@@ -104,28 +103,55 @@ static struct platform_device *carambola_devices[] __initdata = {
         &carambola_i2c_gpio
 };
 
-static struct spi_board_info carambola_spi_info[] = {
+/*
+static struct spi_board_info __initdata carambola_spi_info[] = {
 	{
-		.bus_num	= 0,
-		.chip_select	= 0,
-		.max_speed_hz	= 0,
-		.modalias	= "spidev",
+		.modalias	= "mcp2515",
+		.platform_data  = &mcp251x_info,
+	//	.irq		= &gpio_to_irq(14),
+		.irq		= 54,
+		.max_speed_hz	= 10000000,
+		.mode		= SPI_MODE_0,
+ 		.bus_num	= 0,
+ 		.chip_select	= 0,
 	}
+};
+
+*/
+static struct spi_board_info __initdata carambola_spi_info[] = {
+    {
+        .modalias   = "vyspi",
+        .max_speed_hz   = 10000000,
+	.irq		= 54,
+        .bus_num    = 0,
+        .chip_select    = 0,
+        .mode = SPI_MODE_0,
+    },
 };
 
 static void __init carambola_init(void)
 {
 	rt305x_gpio_init((RT305X_GPIO_MODE_GPIO << RT305X_GPIO_MODE_UART0_SHIFT) |
-			 RT305X_GPIO_MODE_I2C);
+			 RT305X_GPIO_MODE_I2C|RT305X_GPIO_MODE_SPI);
 	carambola_register_gpiodev();
+
+	rt305x_register_spi(carambola_spi_info, ARRAY_SIZE(carambola_spi_info));
 	platform_add_devices(carambola_devices, ARRAY_SIZE(carambola_devices));
-	rt305x_register_flash(0, &carambola_flash_data);
+
+	/* we want fixed partitions sizes for now */
+/*	__rt305x_register_flash(0,
+				carambola_partitions,
+				ARRAY_SIZE(carambola_partitions));
+*/
+	rt305x_flash0_data.nr_parts = ARRAY_SIZE(carambola_partitions);
+	rt305x_flash0_data.parts = carambola_partitions;
+	rt305x_register_flash(0);
+
 
 	rt305x_esw_data.vlan_config = RT305X_ESW_VLAN_CONFIG_WLLLL;
 	rt305x_register_ethernet();
 	rt305x_register_wifi();
 	rt305x_register_wdt();
-	rt305x_register_spi(carambola_spi_info, ARRAY_SIZE(carambola_spi_info));
 	rt305x_register_usb();
 }
 

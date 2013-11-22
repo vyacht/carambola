@@ -198,7 +198,7 @@ static inline int ramips_spi_wait_till_ready(struct ramips_spi *rs)
 		if ((status & SPISTAT_BUSY) == 0)
 			return 0;
 
-		udelay(1);
+		// udelay(1);
 	}
 
 	return -ETIMEDOUT;
@@ -212,10 +212,53 @@ ramips_spi_write_read(struct spi_device *spi, struct spi_transfer *xfer)
 	u8 *rx = xfer->rx_buf;
 	const u8 *tx = xfer->tx_buf;
 	int err;
+	int mcp2515_command;
 
 	spi_debug("%s(%d): %s %s\n", __func__, xfer->len,
 		  (tx != NULL) ? "tx" : "  ",
 		  (rx != NULL) ? "rx" : "  ");
+
+	/* Ramips 3xxx half duplex workaround for mcp2515*/
+	if (tx && rx) {
+		mcp2515_command = tx[0];
+		for (count = 0; count < xfer->len; count++) {
+			/* first byte always written */
+			if ((count == 0) || (mcp2515_command & 0x40) || (mcp2515_command == 0x05) || (mcp2515_command == 0x02)) {
+				spi_debug("%s: r/w w 0x%02x\n", __func__, tx[count]);
+				ramips_spi_write(rs, RAMIPS_SPI_DATA, tx[count]);
+				ramips_spi_setbits(rs, RAMIPS_SPI_CTL, SPICTL_STARTWR);
+				err = ramips_spi_wait_till_ready(rs);
+				if (err) {
+					dev_err(&spi->dev, "TX failed, err=%d\n", err);
+					goto out;
+				}
+				*rx++=0;
+			}
+			/* mcp2515 read register instruction */
+			if ((count == 1) && (mcp2515_command == 0x03)) {
+				spi_debug("%s: r/w w 0x%02x\n", __func__, tx[count]);
+				ramips_spi_write(rs, RAMIPS_SPI_DATA, tx[count]);
+				ramips_spi_setbits(rs, RAMIPS_SPI_CTL, SPICTL_STARTWR);
+				err = ramips_spi_wait_till_ready(rs);
+				if (err) {
+					dev_err(&spi->dev, "TX failed, err=%d\n", err);
+					goto out;
+				}
+				*rx++=0;
+			}
+			if ((count > 1) && !(mcp2515_command & 0x40) && !(mcp2515_command == 0x05) && !(mcp2515_command == 0x02)) {
+				ramips_spi_setbits(rs, RAMIPS_SPI_CTL, SPICTL_STARTRD);
+				err = ramips_spi_wait_till_ready(rs);
+				if (err) {
+					dev_err(&spi->dev, "RX failed, err=%d\n", err);
+					goto out;
+				}
+				*rx++ = (u8) ramips_spi_read(rs, RAMIPS_SPI_DATA);
+				spi_debug("%s: r/w r 0x%02x\n", __func__, rx[count]);
+			}
+		}
+		goto out;
+	}
 
 	if (tx) {
 		for (count = 0; count < xfer->len; count++) {
@@ -419,6 +462,8 @@ static int __init ramips_spi_probe(struct platform_device *pdev)
 	struct ramips_spi *rs;
 	struct resource *r;
 	int status = 0;
+
+	dev_info(&pdev->dev, "Probing SPI-RAMIPS\n");
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*rs));
 	if (master == NULL) {
