@@ -14,9 +14,8 @@ PKG_RELEASE:=1
 include $(INCLUDE_DIR)/package.mk
 
 define Package/iomode
-	SECTION:=net
 	DEPENDS:=+io
-	CATEGORY:=Network
+	CATEGORY:=VYACHT
 	TITLE:=iomode sets desired io mode for RT305x UART/GPIO
 	MAINTAINER:=Bernd Ocklin <bernd@vyacht.net>
 endef
