@@ -11,20 +11,12 @@ PKG_NAME:=gpsd
 PKG_VERSION:=3.9
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-#PKG_MD5SUM:=52d9785eaf1a51298bb8900dbde88f98
-
 PKG_BUILD_DEPENDS:=libncurses
 
 include $(INCLUDE_DIR)/package.mk
-include $(INCLUDE_DIR)/scons.mk
+#include $(INCLUDE_DIR)/scons.mk
 
-define Package/vy-gpsd/Default
-  DEPENDS:=+librt
-  URL:=http://catb.org/gpsd/
-endef
-
-define Package/vy-gpsd/Default/description
+define Package/vy-gpsd/description
   gpsd is a userland daemon acting as a translator between GPS and AIS receivers
   and their clients. gpsd listens on port 2947 for clients requesting
   position/time/velocity information.  The receivers are expected to generate
@@ -35,20 +27,14 @@ define Package/vy-gpsd/Default/description
 endef
 
 define Package/vy-gpsd
-  $(call Package/vy-gpsd/Default)
   SECTION:=net
   CATEGORY:=VYACHT
-  DEPENDS+= +libcap +libncurses
+  DEPENDS+= +libcap +libncurses +libpthread +librt
   TITLE:=An interface daemon for GPS receivers
 endef
 
 define Package/vy-gpsd/conffiles
 /etc/config/gpsd
-endef
-
-define Package/vy-gpsd/description
-  $(call Package/vy-gpsd/Default/description)
-  This package contains the GPS daemon.
 endef
 
 SCONS_OPTIONS += \
@@ -70,6 +56,11 @@ SCONS_OPTIONS += \
 	implicit_link=no \
 	chrpath=no
 
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)/
+endef
+
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
 	$(CP) $(PKG_BUILD_DIR)/gps.h $(1)/usr/include/
@@ -78,6 +69,21 @@ define Build/InstallDev
 	$(CP) $(PKG_BUILD_DIR)/libgps*.so* $(1)/usr/lib/
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
 	$(CP) $(PKG_BUILD_DIR)/libgps*.pc $(1)/usr/lib/pkgconfig/
+endef
+
+export PLATFORM=posix
+
+SCONS_VARS = \
+        CC="$(TARGET_CC_NOCACHE)" \
+        CXX="$(TARGET_CXX_NOCACHE)" \
+        CFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS)" \
+        CXXFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS)" \
+        CPPFLAGS="$(TARGET_CPPFLAGS) $(EXTRA_CPPFLAGS)" \
+        LDFLAGS="$(TARGET_LDFLAGS) $(EXTRA_LDFLAGS)" \
+        DESTDIR="$(PKG_INSTALL_DIR)"
+
+define Build/Compile
+	(echo "compiling NOW()"; cd $(PKG_BUILD_DIR); $(SCONS_VARS) scons prefix=/usr $(SCONS_OPTIONS); echo "done NOW()")
 endef
 
 define Package/vy-gpsd/install
@@ -128,6 +134,4 @@ fi
 exit 0
 endef
 
-
 $(eval $(call BuildPackage,vy-gpsd))
-

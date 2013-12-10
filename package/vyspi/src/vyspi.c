@@ -40,7 +40,7 @@
 #include <asm/uaccess.h>
 
 #include "vyspi.h"
-
+#include <linux/delay.h>
 
 /*
  * This supports access to vYacht SPI devices.
@@ -178,7 +178,6 @@ vyspi_read_packet(struct vyspi_data *spidev, char __user * ubuf, size_t len)
         u8 			*rx_buf = NULL;
         uint16_t 		packet_len;
         uint16_t 		l;
-        uint32_t 		pgn;
 	const uint8_t		headerlen = 1; 
 
         vyspi_requestHeader(spidev);
@@ -247,8 +246,8 @@ vyspi_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 			return -EAGAIN;
 		printk("reading: going to sleep\n");
 		if (wait_event_interruptible(spidev->inq, spidev->has_data))
-			return -ERESTARTSYS; /* signal: tell the fs layer to handle it */
-		/* otherwise loop, but first reacquire the lock */
+		  return -ERESTARTSYS; // signal: tell the fs layer to handle it 
+		// otherwise loop, but first reacquire the lock 
 		mutex_lock(&spidev->buf_lock);
 	}
 
@@ -291,16 +290,31 @@ vyspi_write(struct file *filp, const char __user *buf,
 }
 
 static long
+vyspi_param(struct vyspi_data * spidev, struct vyspi_ioc_cmd_t * ioc) {
+
+  // no locking here on the buffer as this has been done by ioctl
+
+  u8 *buf = (u8 *)spidev->tx_buf;
+  memset(buf, 0, bufsiz);
+
+  buf[0] = VYSPI_WRITE | VYSPI_PARAM;
+  buf[1] = ioc->type;
+
+  // data was defined inline
+  memcpy((uint8_t *)&buf[2], ioc->data, VYSPI_IOC_CMD_DATA_SIZE);
+
+  vyspi_sync_write(spidev, 1 + 1 + VYSPI_IOC_CMD_DATA_SIZE);
+}
+
+static long
 vyspi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int			err = 0;
 	int			retval = 0;
 	struct vyspi_data	*spidev;
 	struct spi_device	*spi;
-
-	/* Check type and command number */
-	if (cmd != VYSPI_RESET) 
-		return -ENOTTY;
+        struct vyspi_ioc_cmd_t  *ioc;
+	unsigned long           tmp;
 
 	/* Check access direction once here; don't repeat below.
 	 * RESET is a write command so we need to check for READ
@@ -331,10 +345,34 @@ vyspi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	/* read requests */
 	case VYSPI_RESET:
-		vyspi_requestReset(spidev) ;
+		vyspi_requestReset(spidev);
 		break;
 
+	case VYSPI_PARAM:
+
+	  printk("vyspi_ioctl() param case\n");
+
+	  tmp = sizeof(struct vyspi_ioc_cmd_t);
+
+	  /* copy into scratch area */
+	  ioc = kmalloc(tmp, GFP_KERNEL);
+	  if (!ioc) {
+	    retval = -ENOMEM;
+	    break;
+	  }
+	  if (__copy_from_user(ioc, (void __user *)arg, tmp)) {
+	    kfree(ioc);
+	    retval = -EFAULT;
+	    break;
+	  }
+
+	  /* translate to spi_message, execute */
+	  retval = vyspi_param(spidev, ioc);
+	  kfree(ioc);
+	  break;
+  
 	default:
+		retval = -ENOTTY;
 		break;
 	}
 
@@ -399,7 +437,11 @@ static int vyspi_open(struct inode *inode, struct file *filp)
 {
 	struct vyspi_data	*spidev;
 	int			status = -ENXIO;
+	struct spi_device * spi        = NULL;
 
+	printk("open device request\n");
+	
+	//	msleep(1000-1);
 	mutex_lock(&device_list_lock);
 
 	list_for_each_entry(spidev, &device_list, device_entry) {
@@ -409,8 +451,7 @@ static int vyspi_open(struct inode *inode, struct file *filp)
 		}
 	}
 
-	printk("open device with status %d\n", status);
-	struct spi_device * spi = NULL;
+	printk("open device with status %d and %d users\n", status, spidev->users);
 	if (status == 0) {
 		spi = spidev->spi;
 
@@ -419,12 +460,11 @@ static int vyspi_open(struct inode *inode, struct file *filp)
 			   asking for interrupt handling 
 			*/
 			spidev->has_data = 0;
-			// TODO - remove hardcoded RIN interrupt number
+
 			status = request_irq(spi->irq, vyspi_interrupt,
 				  IRQF_TRIGGER_FALLING, "vyspi", spidev);
 			printk("open/request irq %d (%d)\n", spi->irq, status);
 		}
-
 
 		if (status == 0) {
 			spidev->users++;
@@ -433,16 +473,15 @@ static int vyspi_open(struct inode *inode, struct file *filp)
 		}
 		
 		if(status) {
-	        	free_irq(spi->irq, spidev);
-			printk("freeing irq %d (%d)\n", spi->irq, status);
+		  free_irq(spi->irq, spidev);
+		  printk("freeing irq %d (%d)\n", spi->irq, status);
 		}
 	} else
 		pr_debug("vyspi: nothing for minor %d\n", iminor(inode));
 
 
 	mutex_unlock(&device_list_lock);
-	printk("vyspi: open finished - sending reset\n");
-	vyspi_requestReset(spidev);
+	printk("vyspi: open finished\n");
 	return status;
 }
 
