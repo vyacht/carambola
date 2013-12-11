@@ -172,6 +172,7 @@ int main(int argc, char * argv[]) {
   uint32_t spiLength = 0;
 
   ioctl(fd, VYSPI_RESET, NULL);
+  usleep(1000000 - 1);
 
   while(keepRunning) {
 
