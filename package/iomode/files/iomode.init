@@ -130,10 +130,32 @@ handle_device() {
 	stty -F $device $speed
 }
 
+handle_gpio() {
+
+	local cfg="$1"
+	local gpio=""
+	local dir=""
+	local value=""
+	
+        config_get type "$cfg" TYPE
+	
+	config_get gpio "$cfg" export
+	config_get dir "$cfg"  direction
+	config_get value "$cfg" value
+
+	echo "setting gpio $gpio: $dir with $value"
+	if ! [ -d "/sys/class/gpio/gpio$gpio" ]; then
+		echo $gpio > /sys/class/gpio/export
+	fi
+	echo $dir  > /sys/class/gpio/gpio$gpio/direction
+	echo $value > /sys/class/gpio/gpio$gpio/value
+}
+
 start() {
 	echo "start ..." 
 	config_load iomode
 	config_foreach handle_device 'dev'
 	handle_gpio_purpose
+	config_foreach handle_gpio 'gpio'
 } 
 

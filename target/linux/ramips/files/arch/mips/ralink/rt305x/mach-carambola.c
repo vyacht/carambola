@@ -109,7 +109,7 @@ static struct spi_board_info carambola_spi_info[] = {
 		.bus_num	= 0,
 		.chip_select	= 0,
 		.max_speed_hz	= 0,
-		.modalias	= "spidev",
+		.modalias	= "vyspi",
 	}
 };
 

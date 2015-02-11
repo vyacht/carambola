@@ -3,17 +3,14 @@ local os       = require "os"
 local table    = require "table"
 local nixio    = require "nixio"
 local fs       = require "nixio.fs"
-local sys      = require "luci.sys"
-local version  = require "luci.version"
-local util     = require "luci.util"
-local protocol = require "luci.http.protocol"
-local uci      = require "luci.model.uci"
+local uci      = require "uci"
 local bus      = require "ubus"
-local _ip      = require "vyacht-ip"
-local mime     = require "vyacht-mime"
-local json     = require "vyacht-json"
-
-require "luci.tools.status"
+local sys      = require "vyacht.sys"
+local version  = require "vyacht.version"
+local protocol = require "vyacht.protocol"
+local _ip      = require "vyacht.ip"
+local mime     = require "vyacht.mime"
+local json     = require "vyacht.json"
 
 if mtest == 1 then
 -- module only for testing
@@ -24,7 +21,7 @@ end
 ptest = 0
 
 -- print to out instead of web server
-vtest = 0
+-- vtest = 0
             
 function file_exists(name)
   local f=io.open(name,"r")
@@ -170,10 +167,59 @@ function handle_request(env)
 	end
 end
 
+function makeVersionFromStrings(v1, v2, v3)
+
+  local version = {x = 0, y = 0, z = 0}
+
+  if v1 then
+    version.x = tonumber(v1)
+  end
+  if v2 then
+    version.y = tonumber(v2)
+  end
+  if v3 then
+    version.z = tonumber(v3)
+  end
+  if not version.x then
+    version.x = 0
+  end
+  if not version.y then
+    version.y = 0
+  end
+  if not version.z then
+    version.z = 0
+  end
+  
+  return version
+  
+end
+
+function extractVersionFromString(str)
+
+  b, e, v1, v2, v3 = string.find( str , "(%d+)%.(%d)%.*(%d*)" )
+  
+  if not b then 
+    local version = {x = 0, y = 0, z = 0}
+    return version
+  end
+  
+  return makeVersionFromStrings(v1, v2, v3)
+  
+end
+
+function versionToString(version)
+
+  return string.format("%d.%d.%d", version.x, version.y, version.z)  
+
+end
+
 function readHardwareOptions()
 
 --  config hardware board
 --    option version '8.3'
+--        
+--  config platform software
+--    option version '1.0.0'
 --        
 --  config hardware module
 --    option type nmea-iso
@@ -183,16 +229,29 @@ function readHardwareOptions()
 --    list device radio0
 --    list device eth0.1
 --    list device eth0.2
+
+  if not file_exists("/etc/config/vyacht") then
+    return nil
+  end
  
   local hw = {
-    board = {version = ""},
-    module = {type = "", version = ""},
+    board = {version = {x = 0, y = 0, z = 0}},
+    software = {version = {x = 0, y = 0, z = 0}},
+    module = {type = "", version = {x = 0, y = 0, z = 0}},
     network = {devices = {}}
   }
   
-  hw.board.version = _uci_real:get("vyacht", "board", "version")
-  hw.module.version = _uci_real:get("vyacht", "module", "version")
+  bv = _uci_real:get("vyacht", "board", "version") or "0.0.0"
+  hw.board.version = extractVersionFromString(bv)
+  
+  sv = _uci_real:get("vyacht", "software", "version") or "0.0.0"
+  hw.software.version = extractVersionFromString(sv)
+  
+  mv = _uci_real:get("vyacht", "module", "version") or "0.0.0"
+  hw.module.version = extractVersionFromString(mv)
+  
   hw.module.type = _uci_real:get("vyacht", "module", "type")
+  
   local lst = _uci_real:get("vyacht", "network", "device")                                                                            
   for i = 1, #lst do                                                                                                            
     table.insert(hw.network.devices, lst[i])
@@ -204,12 +263,58 @@ end
 
 function writeHardwareOptions(hw)
 
-  _uci_real:set("vyacht", "board", "version", hw.board.version)
-  _uci_real:set("vyacht", "module", "version", hw.module.version)
+  _uci_real:set("vyacht", "board", "version", versionToString(hw.board.version))
+  _uci_real:set("vyacht", "software", "version", versionToString(hw.software.version))
+  _uci_real:set("vyacht", "module", "version", versionToString(hw.module.version))
   _uci_real:set("vyacht", "module", "type", hw.module.type)
   _uci_real:set("vyacht", "network", "device", hw.network.devices)
   _uci_real:commit("vyacht")
   
+end
+
+function isSystemUpgradeable(hw)
+
+  -- need to check if the vyacht config file is there
+  
+  if not hw then
+    return false, "System too old. No hardware description file found."
+  end
+  
+  if hw.software.version.x == 0 then 
+    return false, string.format("System too old. Too old software version %s.", versionToString(hw.software.version))
+  end
+  
+  return true
+  
+end
+
+function parseUpgradeFilename(filename)
+
+  local pattern = "^vyacht%-wifi%-(%d+)%.(%d+)%.(%d+)%-upgrade%-(%d+)%.(%d+)%.(%d+).bin$"
+  
+  local file = {
+    board = {version = {x = 0, y = 0, z = 0}},
+    software = {version = {x = 0, y = 0, z = 0}},
+    product = "",
+    isUpgrade = false
+  }
+  
+  b, e, b1, b2, b3, s1, s2, s3 = string.find( filename , pattern )           
+  
+  if not b then
+    return nil
+  end
+  
+  file.board.version = makeVersionFromStrings(b1, b2, b3)
+  
+  file.software.version = makeVersionFromStrings(s1, s2, s3)
+  
+  file.product = "vyacht-wifi"
+  
+  file.isUpgrade = true
+  
+  return file
+    
 end
 
 function uploadFile(env)
@@ -217,13 +322,12 @@ function uploadFile(env)
   local lf = nil
   local filename = ""
   local fileshort = ""
+  local checksum = ""
+  local bytecnt = 0
     
   function filecb(field, data, bl)
   
 	local d = data or ""
-	
---	_write_json(field)
---	vWrite("\n")
 	
 	if not lf then
 	  if field and field.name then
@@ -231,30 +335,45 @@ function uploadFile(env)
   	    filename = "/tmp/" .. fileshort
             lf = io.open(filename, "wb")
             if not lf then
-              return false, "Couldn't write file (%s)" % filename
+              return false, string.format("Couldn't write file (%s)", filename)
             end
           end
         end
+        
         if lf then 
-  	  lf:write(data)
+          if checksum:len() < 32 then
+            local s = checksum:len()
+            local diff = 32 - s
+    
+            if data:len() < diff then diff = data:len() end
+            
+            checksum = checksum .. data:sub(1, diff)
+            data     = data:sub(diff + 2)
+          end
+          if data then 
+            bytecnt = bytecnt + data:len()
+            if data:len() > 0 then
+    	      lf:write(data)
+    	    end
+    	  end
   	end
   	return true
   end
 	
-	function readcb() 
-		local rv, buf
-		rv, buf = uhttpd.recv(4096)
-		if buf and rv > 0 then
-			return buf
-		end
-		return nil
+  function readcb() 
+	local rv, buf
+	rv, buf = uhttpd.recv(4096)
+	if buf and rv > 0 then
+		return buf
 	end
+	return nil
+  end
     
-	local _debug = false
-	local msg = {
+  local _debug = false
+  local msg = {
     	env = env,
     	params = {}
-  	}
+  }
 
   vWrite("HTTP/1.0 200 OK\r\n")
   vWrite("Content-Type: application/json\r\n\r\n")
@@ -276,62 +395,75 @@ function uploadFile(env)
   end
   
   if blocks <= contentLength then
-    vWrite("{%q: \"Only %d kByte of space found for a %d kByte file. Try to reboot the device.\"}" % {"error", blocks, contentLength})
+    vWrite(string.format("{%q: \"Only %d kByte of space found for a %d kByte file. Try to reboot the device.\"}", 
+    	"error", blocks, contentLength))
     return
   end
   
+  bytecnt = 0
+    
   if env.REQUEST_METHOD == "POST" then
 	mime.mimedecode_message_body(msg, readcb, filecb)
         io.close(lf)
   end
   
+  os.execute("logger -s -t device -p daemon.info " .. "Decoding uploaded file with " .. bytecnt .. " now: " .. filename)
+  
   if not file_exists(filename) then
-    vWrite("{\"error\": \"No installable file found (%s)!\"}" % fileshort)
+    vWrite(string.format("{\"error\": \"No installable file found (%s)!\"}", fileshort))
+    return
+  end
+
+  nstr = ""
+  for i = 1, #checksum do
+    local c = checksum:sub(i,i)
+    print(c)
+    if ((c < '0') or (c > '9')) and ((c < 'a') or (c > 'f')) then
+      nstr = nstr .. '.'
+    else
+      nstr = nstr .. c
+    end
+  end
+  checksum = nstr
+  
+  os.execute("logger -s -t device -p daemon.info " .. "Checking checksum now: " .. filename)
+  local filechecksum = sys.exec(string.format("md5sum %q", filename)):match("^([^%s]+)")  
+  os.execute("logger -s -t device -p daemon.info " .. "File checksum: " .. filechecksum)
+  os.execute("logger -s -t device -p daemon.info " .. "Checksum     : " .. checksum .. " " .. checksum:len() .. "")
+ 
+  if checksum ~= filechecksum then
+    vWrite(string.format("{\"error\": \"File checksum %s doesn't match %s\"}", filechecksum, checksum))
+    return
+  end
+    
+  local file = parseUpgradeFilename(fileshort)
+  if not file then
+    vWrite(string.format("{\"error\": \"No a valid file for upgrade (%s)!\"}", fileshort))
     return
   end
   
-  local ipk = string.match(fileshort, "^vyacht%-web(.+).ipk$")
-  if ipk then
+  local hw = readHardwareOptions()
   
-    local hw = readHardwareOptions()
-
-    -- installable ipk package
-    local res, data = cmdExecute("opkg install " .. filename)
-    
-    if not res then
-      vWrite(string.format("{%q: \"Installation of %s failed.\"}", "error", fileshort))
-      return
-    end
-    
-    writeHardwareOptions(hw)
-    
-    -- rather check if the wanted file is there before removing
-    local f=io.open("/www/index2.html", "r")
-    if f~=nil then
-       io.close(f)
-    
-       os.remove("/www/index.html")
-       os.rename("/www/index2.html", "/www/index.html")
-    end
-             
-    vWrite("{}") 
-    
-  else
-    -- for now we only support ipk
-    vWrite("{%q: \"No valid file for installation (%s)!\"}" % {"error", fileshort})
+  su, error = isSystemUpgradeable(hw)
+  if not su then
+    vWrite(string.format("{\"error\": \"System not upgradable: %s\"}", error))
     return
-    
---    local tgz = string.match(filename, "^(.+).tgz$")
---    if tgz then
---      vWrite("{\"error\": \"%s matches tgz!\"}" % filename)
---    else 
---      local bin = string.match(filename, "^(.+).bin$")
---      if bin then
---        vWrite("{\"error\": \"%s matches bin!\"}" % filename)
---      end
---    end -- tgz
-  end -- ipk
+  end
   
+  if file.board.version.x ~= hw.board.version.x then
+    vWrite(string.format("{\"error\": \"System not upgradable: Board version %s doesn't match file version %s\"}",
+      versionToString(hw.board.version), versionToString(file.board.version)))
+    return
+  end
+
+  -- set new software version
+  hw.software = file.software
+  writeHardwareOptions(hw)
+  
+  sys.exec(string.format("killall dropbear uhttpd; sleep 1; /sbin/sysupgrade %q", filename))
+
+  vWrite(string.format("{%q: %q}", "success", "Going into upgrade procedure and reboot of version "
+    .. versionToString(file.software.version) .. " now."))
 end
 
 function systemStatus(params) 
@@ -552,12 +684,12 @@ end
 function changeWan(addr, realDev, lanwan, netName)
 
 	if realDev ~= "eth0.2" then
-        	vWrite("{\"error\": \"Cannot convert %s to WAN or LAN!\"}" % realDev)
+        	vWrite(string.format("{\"error\": \"Cannot convert %s to WAN or LAN!\"}", realDev))
         	return
         end
         
 	if netName ~= "wan" and netName ~= "lan2" then
-        	vWrite("{\"error\": \"Change WAN: Not a valid network (%s)!\"}" % netName)
+        	vWrite(string.format("{\"error\": \"Change WAN: Not a valid network (%s)!\"}", netName))
         	return
 	end
 
@@ -585,17 +717,17 @@ function changeWan(addr, realDev, lanwan, netName)
             end
             
             if prefix > 30 then
-              vWrite("{\"error\": \"This router requires prefixes between 0 and 30 to allow for a minimum of 4 hosts on the network\"}" % ip)
+              vWrite("{\"error\": \"This router requires prefixes between 0 and 30 to allow for a minimum of 4 hosts on the network\"}")
 	      return  
             end
             
             -- check that we are not in range of the lan1
 	    if IPInNetRange(ip, prefix, "lan1") then
-              vWrite("{\"error\": \"New IP %s is in the IP range of the Ethernet 1\"}" % ip)
+              vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the Ethernet 1\"}", ip))
 	      return  
 	    end
 	    if IPInNetRange(ip, prefix, "wifi") then
-              vWrite("{\"error\": \"New IP %s is in the IP range of the wireless network\"}" % ip)
+              vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the wireless network\"}", ip))
 	      return  
 	    end
 		
@@ -615,13 +747,13 @@ function changeWan(addr, realDev, lanwan, netName)
           return
         end  	
 	-- requires restart of ifdown/up lan and dnsmasq
-	luci.sys.call("env -i /sbin/ifdown %s >/dev/null" % netName)
-	luci.sys.call("env -i /sbin/ifup %s >/dev/null" % netName)
+	sys.call(string.format("env -i /sbin/ifdown %s >/dev/null", netName))
+	sys.call(string.format("env -i /sbin/ifup %s >/dev/null", netName))
 	
-	luci.sys.call("env -i /etc/init.d/fix_hosts start >/dev/null")
-	luci.sys.call("env -i /etc/init.d/dnsmasq restart >/dev/null")
-	luci.sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
-	luci.sys.call("env -i /etc/init.d/gpsd start >/dev/null")
+	sys.call("env -i /etc/init.d/fix_hosts start >/dev/null")
+	sys.call("env -i /etc/init.d/dnsmasq restart >/dev/null")
+	sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
+	sys.call("env -i /etc/init.d/gpsd start >/dev/null")
 end
 
 function changeEthernet(params)
@@ -653,7 +785,7 @@ function changeEthernet(params)
         -- print("device= " .. device .. ", lanwan= " .. lanwan .. ", ip= " .. ip)
 	
 	if device ~= "eth01" and device ~= "eth02" then
-        	vWrite("{\"error\": \"Not a valid device (%s)!\"}" % device)
+        	vWrite(string.format("{\"error\": \"Not a valid device (%s)!\"}", device))
         	return
 	end
 	
@@ -689,7 +821,7 @@ function changeEthernet(params)
 	end
 	
 	if lanwan ~= nil and lanwan ~= "lan" and lanwan ~= "wan" then
-        	vWrite("{\"error\": \"Don't recognize command (%s)!\"}" % wan)
+        	vWrite(string.format("{\"error\": \"Don't recognize command (%s)!\"}", wan))
         	return
 	end
 	
@@ -700,7 +832,7 @@ function changeEthernet(params)
 	
 	local netName = getNetNameByDevice(realDev) 
 	if netName ~= "wan" and netName ~= "lan2"  and netName ~= "lan1" then
-        	vWrite("{\"error\": \"Not a valid network (%s)!\"}" % netName)
+        	vWrite(string.format("{\"error\": \"Not a valid network (%s)!\"}", netName))
         	return
 	end
 	
@@ -749,29 +881,29 @@ function checkForAddressChange(addr, realDev)
 	
 	local ip, prefix = _ip.IPv4ToIPAndPrefix(addr)
 	if ip == nil or prefix == nil then
-        	vWrite("{\"error\": \"%s is not a valid address!\"}" % addr)
+        	vWrite(string.format("{\"error\": \"%s is not a valid address!\"}", addr))
         	return nil
 	end
 	
 	-- _ip.IPv4ToIPAndPrefix checks prefix but not IP	
 	if _ip.IPv4ValidIP(ip) ~= true then
-        	vWrite("{\"error\": \"%s is not a valid ip address!\"}" % ip)
+        	vWrite(string.format("{\"error\": \"%s is not a valid ip address!\"}", ip))
         	return nil
 	end
 	
 	if _ip.IPv4ValidPrefix(prefix) ~= true then
-        	vWrite("{\"error\": \"%s is not a valid ip address!\"}" % ip)
+        	vWrite(string.format("{\"error\": \"%s is not a valid ip address!\"}", ip))
         	return nil
 	end
 	
         if prefix > 30 then
-           vWrite("{\"error\": \"This router requires prefixes between 0 and 30 to allow for a minimum of 4 hosts on the network\"}" % ip)
+           vWrite("{\"error\": \"This router requires prefixes between 0 and 30 to allow for a minimum of 4 hosts on the network\"}")
            return  
         end
         
 	local inst = deviceInstalled(realDev)
 	if inst == 0 then
-        	vWrite("{\"error\": \"Device %s is not installed\"}" % realDev)
+        	vWrite(string.format("{\"error\": \"Device %s is not installed\"}", realDev))
         	return nil
 	end
 	
@@ -817,12 +949,12 @@ function changeEthernetAddress(addr, realDev, net_name)
 		
 		-- check that we are not in range of the WAN or lan2
 		if IPInNetRange(ip, prefix, "wan") then
-        		vWrite("{\"error\": \"New IP %s is in the IP range of the WAN\"}" % ip)
+        		vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the WAN\"}", ip))
         		return
 		end
 		
 		if IPInNetRange(ip, prefix, "lan2") then
-        		vWrite("{\"error\": \"New IP %s is in the IP range of the other LAN interface\"}" % ip)
+        		vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the other LAN interface\"}", ip))
         		return
 		end
 	elseif realDev == "eth0.2" then
@@ -832,16 +964,16 @@ function changeEthernetAddress(addr, realDev, net_name)
 		end
 		
 		if IPInNetRange(ip, prefix, "lan1") then
-        		vWrite("{\"error\": \"New IP %s is in the IP range of the other LAN interface\"}" % ip)
+        		vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the other LAN interface\"}", ip))
         		return
 		end
 	else
-        	vWrite("{\"error\": \"You cannot change %s with this function!\"}" % realDev)
+        	vWrite(string.format("{\"error\": \"You cannot change %s with this function!\"}", realDev))
         	return
 	end
   
 	if IPInNetRange(ip, prefix, "wifi") then
-       		vWrite("{\"error\": \"New IP %s is in the IP range of the wireless interface\"}" % ip)
+       		vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the wireless interface\"}", ip))
        		return
 	end
 		
@@ -855,13 +987,13 @@ function changeEthernetAddress(addr, realDev, net_name)
 		return
 	end
 	
-	luci.sys.call("env -i /sbin/ifdown %s >/dev/null" % net_name)
-	luci.sys.call("env -i /sbin/ifup %s >/dev/null" % net_name)
+	sys.call(string.format("env -i /sbin/ifdown %s >/dev/null", net_name))
+	sys.call(string.format("env -i /sbin/ifup %s >/dev/null", net_name))
 	
-	luci.sys.call("env -i /etc/init.d/fix_hosts start >/dev/null")
-	luci.sys.call("env -i /etc/init.d/dnsmasq restart >/dev/null")
-	luci.sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
-	luci.sys.call("env -i /etc/init.d/gpsd start >/dev/null")
+	sys.call("env -i /etc/init.d/fix_hosts start >/dev/null")
+	sys.call("env -i /etc/init.d/dnsmasq restart >/dev/null")
+	sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
+	sys.call("env -i /etc/init.d/gpsd start >/dev/null")
 end
 
 function getNetNameByDevice(devName) 
@@ -878,6 +1010,10 @@ function getNetNameByDevice(devName)
         return net_name
 end
 
+function isValidWifiKey(key) 
+        return key:find('^[%-%.%w_]+$') ~= nil
+end
+
 function changeWifiKey(key) 
 	local sec_name
 	
@@ -886,6 +1022,21 @@ function changeWifiKey(key)
         
 	if not key then
        		vWrite("{\"error\": \"No new key given.\"}")
+       		return
+	end
+	
+	if #key < 8 then
+       		vWrite("{\"error\": \"New wireless key too short. Please use at least 8 characters.\"}")
+       		return
+	end
+	
+	if #key > 64 then
+       		vWrite("{\"error\": \"New wireless key too long.\"}")
+       		return
+	end
+	
+	if not isValidWifiKey(key) then
+       		vWrite("{\"error\": \"New wireless key contains illegal characters.\"}")
        		return
 	end
 	
@@ -899,10 +1050,10 @@ function changeWifiKey(key)
 	_uci_real:commit("wireless")
 	
 	-- requires restart of wifi, ifdown/up wifi and dnsmasq
-	luci.sys.call("env -i /sbin/ifdown wifi >/dev/null")
-	luci.sys.call("env -i /sbin/ifup wifi >/dev/null")
-	luci.sys.call("env -i /sbin/wifi down >/dev/null")
-	luci.sys.call("env -i /sbin/wifi up >/dev/null")
+	sys.call("env -i /sbin/ifdown wifi >/dev/null")
+	sys.call("env -i /sbin/ifup wifi >/dev/null")
+	sys.call("env -i /sbin/wifi down >/dev/null")
+	sys.call("env -i /sbin/wifi up >/dev/null")
 	
         vWrite("{}")
 end
@@ -941,7 +1092,7 @@ function changeWifi(params)
         
         if switch ~= nil then
         	if switch ~= "on" and switch ~= "off" then
-	       		vWrite("{\"error\": \"Unkown wifi switch command %s\"}" % switch)
+	       		vWrite(string.format("{\"error\": \"Unkown wifi switch command %s\"}", switch))
        			return
         	end
         end
@@ -974,8 +1125,8 @@ function changeWifi(params)
                     	
 		_uci_real:commit("wireless")
 		
-		luci.sys.call("env -i /sbin/ifdown wifi >/dev/null")
-		luci.sys.call("env -i /sbin/wifi down >/dev/null")
+		sys.call("env -i /sbin/ifdown wifi >/dev/null")
+		sys.call("env -i /sbin/wifi down >/dev/null")
 		
 		return
         else
@@ -988,15 +1139,15 @@ function changeWifi(params)
 	end
 	
 	if IPInNetRange(ip, prefix, "wan") then
-       		vWrite("{\"error\": \"New IP %s is in the IP range of the WAN network\"}" % ip)
+       		vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the WAN network\"}", ip))
        		return
 	end
 	if IPInNetRange(ip, prefix, "lan1") then
-       		vWrite("{\"error\": \"New IP %s is in the IP range of the first LAN network\"}" % ip)
+       		vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the first LAN network\"}", ip))
        		return
 	end
 	if IPInNetRange(ip, prefix, "lan2") then
-       		vWrite("{\"error\": \"New IP %s is in the IP range of the second LAN network\"}" % ip)
+       		vWrite(string.format("{\"error\": \"New IP %s is in the IP range of the second LAN network\"}", ip))
        		return
 	end
 	
@@ -1022,18 +1173,18 @@ function changeWifi(params)
 	
 	if (restartWifi > 0) then
 		-- requires restart of wifi, ifdown/up wifi and dnsmasq
-		luci.sys.call("env -i /sbin/ifdown wifi >/dev/null")
-		luci.sys.call("env -i /sbin/ifup wifi >/dev/null")
-		luci.sys.call("env -i /sbin/wifi down >/dev/null")
-		luci.sys.call("env -i /sbin/wifi up >/dev/null")
+		sys.call("env -i /sbin/ifdown wifi >/dev/null")
+		sys.call("env -i /sbin/ifup wifi >/dev/null")
+		sys.call("env -i /sbin/wifi down >/dev/null")
+		sys.call("env -i /sbin/wifi up >/dev/null")
 	end
 	
 	
 	if (restartWifi > 1) then
-		luci.sys.call("env -i /etc/init.d/fix_hosts start >/dev/null")
-		luci.sys.call("env -i /etc/init.d/dnsmasq restart >/dev/null")
-		luci.sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
-		luci.sys.call("env -i /etc/init.d/gpsd start >/dev/null")
+		sys.call("env -i /etc/init.d/fix_hosts start >/dev/null")
+		sys.call("env -i /etc/init.d/dnsmasq restart >/dev/null")
+		sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
+		sys.call("env -i /etc/init.d/gpsd start >/dev/null")
 	end
 	
        	vWrite("{}")
@@ -1042,6 +1193,8 @@ end
 function changeNMEA(params) 
 	local speed
 	local device
+	local type = "nmea0183"
+	
 	for k, v in pairs(params) do
 		if k == "speed" then
 			if isNumber(v) then
@@ -1053,17 +1206,51 @@ function changeNMEA(params)
 				device = tonumber(v)
 			end
 		end
+		if k == "type" then
+			type = v
+		end
 	end
 
 	vWrite("HTTP/1.0 200 OK\r\n")
         vWrite("Content-Type: application/json\r\n\r\n")
         
         if (device == nil ) or ((device < 0) or (device > 1)) then
-        	vWrite("{\"internal error\": \"%d is an illegal device number\"}" % {device})
+        	vWrite(string.format("{\"internal error\": \"%d is an illegal device number\"}", device))
         	return
         end
 
+	local hw = readHardwareOptions()
+	if hw.module.type == "seatalk" then
+		if device == 1 then
+        		vWrite(string.format("{%q: \"Seatalk module installed. This port cannot be changed.\"}", "error"))
+       			return
+		end
+	end
+	if hw.module.type == "nmea0183" then
+		if type == "seatalk" then
+        		vWrite(string.format("{%q: \"NMEA0183 module installed. This port cannot be changed to Seatalk. Contact vyacht to ask for how to install Seatalk.\"}", "error"))
+       			return
+		end
+	end
 	if (speed ~= nil) then
+	
+    
+    		if not hw then
+	        	vWrite(string.format("{%q: \"%d is an illegal device number\"}", "internal error"))
+        		return
+    		end
+    		
+    		if hw.module.type == "nmea-iso" then
+    		end
+    		
+    		if hw.module.type == "seatalk" then
+    		end
+		
+		if seatalk then
+	        	vWrite(string.format("{%q: \"\"}", "error"))
+        		return
+		end
+		
 	        local dev = ""
 	        local name = ""
 	        if(device == 0) then 
@@ -1080,7 +1267,7 @@ function changeNMEA(params)
                 sys.call("env -i /etc/init.d/iomode start >/dev/null")
         	vWrite("{}")
 	else
-        	vWrite("{\"error\": \"%s is not a valid speed!\"}" % {speed})
+        	vWrite(string.format("{\"error\": \"%s is not a valid baud rate!\"}", speed))
 	end
 end
 
@@ -1100,8 +1287,8 @@ function changeGps(params)
 	if port ~= nil then
 		_uci_real:set("gpsd", "core", "port", port)
 		_uci_real:commit("gpsd")
-		luci.sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
-		luci.sys.call("env -i /etc/init.d/gpsd start >/dev/null")
+		sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
+		sys.call("env -i /etc/init.d/gpsd start >/dev/null")
         	vWrite("{}")
 	else
         	vWrite("{\"error\": \"Not a valid port number!\"}")
@@ -1123,7 +1310,7 @@ end
 function networkStatus(device) 
   device.available = 0
   if device.installed == 1 then
-    local isUp = vubus:call("network.interface.%s" % device.network, "status", { })
+    local isUp = vubus:call(string.format("network.interface.%s", device.network), "status", { })
     if isUp ~= nil then
       if isUp.up then
         device.status = "Up"
@@ -1209,17 +1396,27 @@ function getNetDevices()
         return devices
 end
 
+function processStatus(process)
+  local ps = sys.processes()
+  
+    for k,v in pairs(ps) do
+        local m = string.find(v["COMMAND"], process)
+        if m then
+          return "Running (" .. v["%CPU"] .. ")"
+        end
+    end
+                        
+    return "Disconnected"
+end
+
 function getStatus() 
 
-	-- network
-        ntm = require "luci.model.network".init()
-       
-       
         -- first step: look at network devices and get their network names 
         -- this works only from /etc/config/vyacht or network
 
         local dev
         local devices = getNetDevices()
+        local hw      = readHardwareOptions()
         
 	-- GPS
 	local port = _uci_real:get("gpsd", "core", "port")
@@ -1230,20 +1427,9 @@ function getStatus()
 		Status = "Disconnected",
 		Port   = port
 	}
-	if has_gpsd then
-		gps_data.Status = "Running"
-	end
+	gps_data.Status = processStatus("/usr/sbin/gpsd")
 	
-	local NMEA_data = {{
-		DeviceName = "/dev/ttyS0",
-		Status = "TEST",
-		Speed  = 4800
-	}, 
-	{
-		DeviceName = "/dev/ttyS1",
-		Status = "TEST",
-		Speed = "4800",
-	}}
+	local NMEA_data;
 		
         -- 3 devices: wifi, wan, lan1 or wifi, lan1, lan2
         -- max 1 wan
@@ -1254,19 +1440,43 @@ function getStatus()
 	
 	getWifiKey(devices.wifi)
 
-        -- NMEA speed
-        local dev  = "/dev/ttyS0"
-        local speed  = util.exec("stty -F %s speed" %{dev} )
-        if speed then
-          -- remember 0 is 1, lua is weird
-          NMEA_data[1].Speed = speed:gsub("^%s*(.-)%s*$", "%1")
-        end
+	if hw.module.type == "nmea2000" then
+          NMEA_data = {{
+		DeviceName = "/dev/vyspi0.0",
+		Status = "TEST",
+		Speed  = 250000,
+		Type   = "nmea2000"
+	  }};
+	else
+          NMEA_data = {{
+		DeviceName = "/dev/ttyS0",
+		Status = "TEST",
+		Speed  = 4800,
+		Type   = "nmea0183"
+	  }, 
+	  { 
+		DeviceName = "/dev/ttyS1",
+		Status = "TEST",
+		Speed = "4800",
+		Type   = "nmea0183"
+ 	  }}
+	  -- NMEA speed
+          local dev  = "/dev/ttyS0"
+          local speed  = sys.exec(string.format("stty -F %s speed", dev))
+          if speed then
+            -- remember 0 is 1, lua is weird
+            NMEA_data[1].Speed = speed:gsub("^%s*(.-)%s*$", "%1")
+          end
 
-        dev  = "/dev/ttyS1"
-        speed  = util.exec("stty -F %s speed" %{dev} )
-        if speed then
-          NMEA_data[2].Speed = speed:gsub("^%s*(.-)%s*$", "%1")
-        end
+          dev  = "/dev/ttyS1"
+          speed  = sys.exec(string.format("stty -F %s speed", dev))
+          if speed then
+            NMEA_data[2].Speed = speed:gsub("^%s*(.-)%s*$", "%1")
+	    if hw.module.type == "seatalk" then
+              NMEA_data[2].Type = "seatalk"
+	    end          
+          end
+	end
         
         vWrite("HTTP/1.0 200 OK\r\n")
         vWrite("Content-Type: application/json\r\n\r\n")
@@ -1295,7 +1505,7 @@ end
 -- getStatus()
 
 --local pkgname = "io"
---local package = util.exec("opkg list-installed | grep " .. pkgname)            
+--local package = sys.exec("opkg list-installed | grep " .. pkgname)            
 --for k in string.gmatch(package, "(.-)(%s)-(%s)(.-)\n") do
   -- wpad-mini - 20120910-1
 --  print("line: " .. k)

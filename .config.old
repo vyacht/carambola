@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # OpenWrt version: Barrier Breaker (r33735)
-# Tue Feb 10 22:27:06 2015
+# Tue Feb 10 21:59:06 2015
 #
 CONFIG_HAVE_DOT_CONFIG=y
 # CONFIG_TARGET_ppc40x is not set
@@ -3025,9 +3025,9 @@ CONFIG_PACKAGE_kmod-eeprom-93cx6=y
 # CONFIG_PACKAGE_kmod-gpio-dev is not set
 # CONFIG_PACKAGE_kmod-gpio-nxp-74hc164 is not set
 # CONFIG_PACKAGE_kmod-gpiotoggling is not set
-CONFIG_PACKAGE_kmod-hid=m
+# CONFIG_PACKAGE_kmod-hid is not set
 CONFIG_PACKAGE_kmod-input-core=y
-CONFIG_PACKAGE_kmod-input-evdev=m
+# CONFIG_PACKAGE_kmod-input-evdev is not set
 # CONFIG_PACKAGE_kmod-input-gpio-buttons is not set
 # CONFIG_PACKAGE_kmod-input-gpio-encoder is not set
 # CONFIG_PACKAGE_kmod-input-gpio-keys is not set
@@ -3080,7 +3080,7 @@ CONFIG_PACKAGE_kmod-sound-core=m
 # CONFIG_PACKAGE_kmod-usb-atm is not set
 # CONFIG_PACKAGE_kmod-usb-cm109 is not set
 CONFIG_PACKAGE_kmod-usb-core=m
-CONFIG_PACKAGE_kmod-usb-hid=m
+# CONFIG_PACKAGE_kmod-usb-hid is not set
 CONFIG_PACKAGE_kmod-usb-net=m
 # CONFIG_PACKAGE_kmod-usb-net-asix is not set
 # CONFIG_PACKAGE_kmod-usb-net-cdc-ether is not set
@@ -3094,7 +3094,7 @@ CONFIG_PACKAGE_kmod-usb-net-hso=m
 # CONFIG_PACKAGE_kmod-usb-net-sierrawireless is not set
 CONFIG_PACKAGE_kmod-usb-ohci=m
 # CONFIG_PACKAGE_kmod-usb-printer is not set
-CONFIG_PACKAGE_kmod-usb-rt305x-dwc_otg=m
+# CONFIG_PACKAGE_kmod-usb-rt305x-dwc_otg is not set
 CONFIG_PACKAGE_kmod-usb-serial=m
 # CONFIG_PACKAGE_kmod-usb-serial-ark3116 is not set
 # CONFIG_PACKAGE_kmod-usb-serial-belkin is not set
@@ -3171,10 +3171,10 @@ CONFIG_PACKAGE_MAC80211_MESH=y
 # CONFIG_PACKAGE_kmod-net-zd1201 is not set
 # CONFIG_PACKAGE_kmod-p54-common is not set
 # CONFIG_PACKAGE_kmod-p54-usb is not set
-CONFIG_PACKAGE_kmod-rt2500-usb=y
+# CONFIG_PACKAGE_kmod-rt2500-usb is not set
 CONFIG_PACKAGE_kmod-rt2800-lib=y
 CONFIG_PACKAGE_kmod-rt2800-pci=y
-CONFIG_PACKAGE_kmod-rt2800-usb=y
+# CONFIG_PACKAGE_kmod-rt2800-usb is not set
 CONFIG_PACKAGE_kmod-rt2x00-lib=y
 
 #
@@ -3184,7 +3184,7 @@ CONFIG_PACKAGE_kmod-rt2x00-lib=y
 # CONFIG_PACKAGE_RT2X00_DEBUG is not set
 CONFIG_PACKAGE_kmod-rt2x00-pci=y
 CONFIG_PACKAGE_kmod-rt2x00-soc=y
-CONFIG_PACKAGE_kmod-rt2x00-usb=y
+# CONFIG_PACKAGE_kmod-rt2x00-usb is not set
 # CONFIG_PACKAGE_kmod-rt73-usb is not set
 # CONFIG_PACKAGE_kmod-rtl8187 is not set
 # CONFIG_PACKAGE_kmod-zd1211rw is not set

@@ -14,9 +14,8 @@ PKG_RELEASE:=1
 include $(INCLUDE_DIR)/package.mk
 
 define Package/vyacht-web
-	SECTION:=net
 	CATEGORY:=VYACHT
-        DEPENDS:=+luci-theme-base +luci-mod-admin-core +luci-theme-openwrt +iomode
+        DEPENDS:=+iomode +luci-lib-core +luci-lib-nixio +uhttpd +uhttpd-mod-lua +jquery-ui
 	TITLE:=allows easy web based configuartion of an vYachtWiFi Router
 	MAINTAINER:=Bernd Ocklin <bernd@vyacht.net>
 endef
@@ -36,24 +35,27 @@ endef
 
 define Package/vyacht-web/install
 	$(INSTALL_DIR) $(1)/www
+	$(INSTALL_DIR) $(1)/www/img
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_DIR) $(1)/usr/lib/lua/
-	$(INSTALL_DATA) ./files/index.html $(1)/www/index2.html
+	$(INSTALL_DIR) $(1)/usr/lib/lua/vyacht/
+	$(INSTALL_DATA) ./files/index.html $(1)/www/index.html
 	$(INSTALL_BIN)  ./files/vyacht.lua $(1)/www/vyacht.lua
-	$(INSTALL_BIN)  ./files/get-opt-alt.lua $(1)/www/
 	$(INSTALL_BIN)  ./files/test-vyacht.lua $(1)/www/
-	$(INSTALL_BIN)  ./files/fix_setup.lua $(1)/www/
 	$(INSTALL_BIN)  ./files/cmd-vyacht.lua $(1)/www/
-	$(INSTALL_BIN)  ./files/vyacht-ip.lua $(1)/usr/lib/lua/vyacht-ip.lua
-	$(INSTALL_BIN)  ./files/vyacht-mime.lua $(1)/usr/lib/lua/vyacht-mime.lua
-	$(INSTALL_BIN)  ./files/vyacht-json.lua $(1)/usr/lib/lua/vyacht-json.lua
+	$(INSTALL_BIN)  ./files/upgrade.lua $(1)/www/
+	$(INSTALL_BIN)  ./files/lib/get-opt-alt.lua $(1)/usr/lib/lua/vyacht/get-opt-alt.lua
+	$(INSTALL_BIN)  ./files/lib/ip.lua $(1)/usr/lib/lua/vyacht/ip.lua
+	$(INSTALL_BIN)  ./files/lib/mime.lua $(1)/usr/lib/lua/vyacht/mime.lua
+	$(INSTALL_BIN)  ./files/lib/json.lua $(1)/usr/lib/lua/vyacht/json.lua
+	$(INSTALL_BIN)  ./files/lib/sys.lua $(1)/usr/lib/lua/vyacht/sys.lua
+	$(INSTALL_BIN)  ./files/lib/version.lua $(1)/usr/lib/lua/vyacht/version.lua
+	$(INSTALL_BIN)  ./files/lib/protocol.lua $(1)/usr/lib/lua/vyacht/protocol.lua
+	$(INSTALL_BIN)  ./files/lib/config.lua $(1)/usr/lib/lua/vyacht/config.lua
 	$(INSTALL_BIN)  ./files/fix_hosts $(1)/etc/init.d/fix_hosts
 	$(INSTALL_DATA) ./files/global.css $(1)/www/global.css
 	$(INSTALL_DATA) ./files/jquery-latest.js $(1)/www/jquery-latest.js
 	$(INSTALL_DATA) ./files/spin.js $(1)/www/spin.js
-	$(INSTALL_DATA) ./files/vyacht.config $(1)/etc/config/vyacht
-	$(INSTALL_DIR) $(1)/www/img
 	$(INSTALL_DATA) ./files/img/glyphicons_085_repeat.png $(1)/www/img/glyphicons_085_repeat.png
 	$(INSTALL_DATA) ./files/img/glyphicons_206_ok_2.png $(1)/www/img/glyphicons_206_ok_2.png
 endef

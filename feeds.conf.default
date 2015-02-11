@@ -1,6 +1,6 @@
-src-git packages git://github.com/8devices/packages.git
-#src-svn packages svn://svn.openwrt.org/openwrt/packages
-#src-svn luci http://svn.luci.subsignal.org/luci/trunk
+#src-git packages git://github.com/8devices/packages.git
+src-svn packages svn://svn.openwrt.org/openwrt/packages
+src-svn luci http://svn.luci.subsignal.org/luci/trunk
 #src-svn xwrt http://x-wrt.googlecode.com/svn/trunk/package
 #src-svn phone svn://svn.openwrt.org/openwrt/feeds/phone
 #src-svn efl svn://svn.openwrt.org/openwrt/feeds/efl
