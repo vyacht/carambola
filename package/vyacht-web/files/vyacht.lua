@@ -112,6 +112,11 @@ function keyvalue(key, val)
   end
 end
 
+function send_header()
+	vWrite("HTTP/1.0 200 OK")
+        vWrite("Content-Type: application/json\r\n\r\n")
+end
+
 function handle_request(env)
 
         exectime = os.clock()
@@ -161,8 +166,7 @@ function handle_request(env)
 	elseif string.find(path, "upload") then
 	        return uploadFile(env)
 	else
-	        vWrite("HTTP/1.0 200 OK\r\n")
-        	vWrite("Content-Type: application/json\r\n\r\n")
+		send_header()
         	vWrite("{}")
 	end
 end
@@ -285,22 +289,22 @@ function readHardwareOptions()
       table.insert(hw.interfaces, itf) 
     end)
   end
- 
+
   -- upgrade legacy that does not have interface sections
   -- we create them here for status reports
   -- for standard nmea0183 and seatalk the speed is read from iomode
-  
+
   if #hw.interfaces == 0 then
 
     if (hw.module.type == "nmea2000") or (hw.module.type == "vymodule") then
 
-      local it1 = {port = 0, speed = 250000, type = "nmea2000", enabled = 1 } 
-      table.insert(hw.interfaces, it1) 
+      local it1 = {port = 0, speed = 250000, type = "nmea2000", enabled = 1 }
+      table.insert(hw.interfaces, it1)
 
     elseif hw.module.type == "seatalk" or hw.module.type == "nmea0183" then
-	  
-      local it1 = {port = 1, speed = 4800, type = "nmea0183", enabled = 1 } 
-      local it2 = {port = 2, speed = 4800, type = "nmea0183", enabled = 1 } 
+
+      local it1 = {port = 1, speed = 4800, type = "nmea0183", enabled = 1 }
+      local it2 = {port = 2, speed = 4800, type = "nmea0183", enabled = 1 }
 
       it1.speed = _uci_real:get("iomode", "serial0", "speed")
 
@@ -309,14 +313,14 @@ function readHardwareOptions()
         it2.speed = 4800
       else
         it2.speed = _uci_real:get("iomode", "serial1", "speed")
-      end  
+      end
 
-      table.insert(hw.interfaces, it1) 
-      table.insert(hw.interfaces, it2) 
+      table.insert(hw.interfaces, it1)
+      table.insert(hw.interfaces, it2)
 
-    end  
+    end
   end
-  
+ 
   return hw
   
 end
@@ -449,8 +453,7 @@ function uploadFile(env)
     	params = {}
   }
 
-  vWrite("HTTP/1.0 200 OK\r\n")
-  vWrite("Content-Type: application/json\r\n\r\n")
+  send_header()
   
   local contentLength = math.floor(tonumber(env.CONTENT_LENGTH) / 1024)
   
@@ -542,8 +545,7 @@ end
 
 function systemStatus(params) 
   -- return system tools installed
-  vWrite("HTTP/1.0 200 OK\r\n")
-  vWrite("Content-Type: application/json\r\n\r\n")
+  send_header()
   
   local systemData = {
     io = file_exists("/usr/bin/io"),
@@ -853,8 +855,7 @@ function changeEthernet(params)
 		end
 	end
 	
-	vWrite("HTTP/1.0 200 OK\r\n")
-        vWrite("Content-Type: application/json\r\n\r\n")
+	send_header()
         
         -- print("device= " .. device .. ", lanwan= " .. lanwan .. ", ip= " .. ip)
 	
@@ -1090,9 +1091,8 @@ end
 
 function changeWifiKey(key) 
 	local sec_name
-	
-	vWrite("HTTP/1.0 200 OK\r\n")
-        vWrite("Content-Type: application/json\r\n\r\n")
+
+	send_header()	
         
 	if not key then
        		vWrite("{\"error\": \"No new key given.\"}")
@@ -1161,8 +1161,7 @@ function changeWifi(params)
 	  return
 	end
 
-	vWrite("HTTP/1.0 200 OK\r\n")
-        vWrite("Content-Type: application/json\r\n\r\n")
+	send_header()
         
         if switch ~= nil then
         	if switch ~= "on" and switch ~= "off" then
@@ -1285,9 +1284,8 @@ function changeNMEA(params)
 		end
 	end
 
-	vWrite("HTTP/1.0 200 OK\r\n")
-        vWrite("Content-Type: application/json\r\n\r\n")
-        
+	send_header()
+       
         if (port == nil ) or (port < 0) then
         	vWrite(string.format("{\"internal error\": \"Empty or negative port number received.\"}", port))
         	return
@@ -1384,8 +1382,7 @@ function changeGps(params)
 		end
 	end
 
-	vWrite("HTTP/1.0 200 OK\r\n")
-        vWrite("Content-Type: application/json\r\n\r\n")
+	send_header()
 
 	if port ~= nil then
 
@@ -1624,8 +1621,7 @@ function getStatus()
 	  end                             
 	end  
 
-        vWrite("HTTP/1.0 200 OK\r\n")
-        vWrite("Content-Type: application/json\r\n\r\n")
+	send_header()
 
         local distversion = version.distversion
 
