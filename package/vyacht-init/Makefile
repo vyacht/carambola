@@ -36,8 +36,11 @@ endef
 define Package/vyacht-init/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN)  ./files/vyacht-init-setup.lua $(1)/usr/sbin
+	$(INSTALL_BIN)  ./files/vyacht-fetch-sysupgrade $(1)/usr/sbin
 	$(INSTALL_DATA) ./files/vyacht.config $(1)/etc/config/vyacht
+	$(INSTALL_BIN)  ./files/fixboot $(1)/etc/init.d/fixboot
 endef
 
 $(eval $(call BuildPackage,vyacht-init))

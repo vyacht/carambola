@@ -32,12 +32,14 @@ local opts = _go.getopt(arg, options)
 local eths = -1
 local seatalk = 0
 local n2k = 0
+local nmea0183 = 0
 
 if opts["eth"] == nil then
   print("no number of ethernet devices given")
   return
 else 
   eths = tonumber(opts["eth"])
+  print("number of ethernet devices given: " .. eths )
 end
 
 if eths < 0 or eths > 2 then
@@ -50,6 +52,9 @@ if opts["seatalk"] then
 end
 if opts["n2k"] then
   n2k = 1
+end
+if opts["nmea0183"] then
+  nmea0183 = 1
 end
 
 local hw = readHardwareOptions()
@@ -74,21 +79,42 @@ else
 end
 
 hw.module.type = "nmea0183"
-if seatalk == 1 then
-  hw.module.type = "seatalk"
-  _uci_real:set("gpsd", "core", "device", {"/dev/ttyS0", "st:///dev/ttyS1"})
-  _uci_real:commit("gpsd")
-elseif n2k == 1 then
+
+if n2k == 1 then
+
   hw.module.type = "nmea2000"
-  _uci_real:set("gpsd", "core", "device", {"vyspi:///dev/vyspi0.0"})
+  hw.module.interface = "serial"
+  
+  _uci_real:set("gpsd", "core", "device", {"vyspi:///dev/ttyS0"})
   _uci_real:commit("gpsd")
   
-  -- write module start file
-  local file = io.open("/etc/modules.d/63-vyspi", "w")
-   file:write("vyspi")
-   file:flush()
-   io.close(file) 
-   
+  -- write vymodule file
+  -- existance of this file will trigger writing interfaces to vymodule
+  local file = io.open("/etc/config/vymodule", "w")
+  file:write("")
+  file:flush()
+  io.close(file)
+
+  -- delete all those that were generated when reading  
+  hw.interfaces = {}
+
+  if seatalk == 1 then                                    
+    local it1 = {port = 2, speed = 4800, type = "seatalk", enabled = 1 } 
+    table.insert(hw.interfaces, it1)                                     
+    local it2 = {port = 1, speed = 4800, type = "nmea0183", enabled = 1 }
+    table.insert(hw.interfaces, it2)                                     
+  elseif nmea0183 == 1 then                                   
+    local it1 = {port = 1, speed = 4800, type = "nmea0183", enabled = 1 }
+    table.insert(hw.interfaces, it1)                                     
+    local it2 = {port = 2, speed = 4800, type = "nmea0183", enabled = 1 }
+    table.insert(hw.interfaces, it2)
+  end         
+                                                                  
+elseif seatalk == 1 then           
+  hw.module.type = "seatalk"
+  _uci_real:set("gpsd", "core", "device", {"/dev/ttyS0", "st:///dev/ttyS1"})
+  _uci_real:commit("gpsd")                                       
+                                                   
 else
   _uci_real:set("gpsd", "core", "device", {"/dev/ttyS0", "/dev/ttyS1"})
   _uci_real:commit("gpsd")

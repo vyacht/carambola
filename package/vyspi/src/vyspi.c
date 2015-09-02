@@ -425,7 +425,7 @@ static irqreturn_t vyspi_interrupt(int irq, void *dev_id)
 	// TODO: locking
 	dev->has_data = 1;
 
-	printk("vyspi_interrupt irq %d\n", irq);
+	// printk("vyspi_interrupt irq %d\n", irq);
 
 	// signal read wait queue
 	wake_up_interruptible(&dev->inq);

@@ -40,6 +40,9 @@ define Package/vyacht-web/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/usr/lib/lua/vyacht/
 	$(INSTALL_DATA) ./files/index.html $(1)/www/index.html
+	$(INSTALL_DATA) ./files/test.html $(1)/www/test.html
+	$(INSTALL_DATA) ./files/debug5.html $(1)/www/debug5.html
+	$(INSTALL_DATA) ./files/debug6.html $(1)/www/debug6.html
 	$(INSTALL_BIN)  ./files/vyacht.lua $(1)/www/vyacht.lua
 	$(INSTALL_BIN)  ./files/test-vyacht.lua $(1)/www/
 	$(INSTALL_BIN)  ./files/cmd-vyacht.lua $(1)/www/

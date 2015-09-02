@@ -229,6 +229,12 @@ function readHardwareOptions()
 --    list device radio0
 --    list device eth0.1
 --    list device eth0.2
+--
+--  config interface 'port2'
+--    option port '2'
+--    option type 'seatalk'
+--    option speed 4800
+--    option enabled '1'
 
   if not file_exists("/etc/config/vyacht") then
     return nil
@@ -237,8 +243,9 @@ function readHardwareOptions()
   local hw = {
     board = {version = {x = 0, y = 0, z = 0}},
     software = {version = {x = 0, y = 0, z = 0}},
-    module = {type = "", version = {x = 0, y = 0, z = 0}},
-    network = {devices = {}}
+    module = {type = "", version = {x = 0, y = 0, z = 0}, interface = "spi"},
+    network = {devices = {}},
+    interfaces = {}
   }
   
   bv = _uci_real:get("vyacht", "board", "version") or "0.0.0"
@@ -251,10 +258,63 @@ function readHardwareOptions()
   hw.module.version = extractVersionFromString(mv)
   
   hw.module.type = _uci_real:get("vyacht", "module", "type")
+
+  hw.module.interface = _uci_real:get("vyacht", "module", "interface")
+
+  if hw.module.interface == '' or hw.module.interface == nil then
+    hw.module.interface = 'serial'
+  end
   
   local lst = _uci_real:get("vyacht", "network", "device")                                                                            
   for i = 1, #lst do                                                                                                            
     table.insert(hw.network.devices, lst[i])
+  end
+  
+  if file_exists("/etc/config/vymodule") then
+    _uci_real:foreach("vymodule", "interface", function(s)
+      name = s[".name"]
+      
+      local itf = {
+        port = 0, speed = 0, type = "", enabled = 0 } 
+      
+      itf.port = _uci_real:get("vymodule", name, "port")
+      itf.speed = _uci_real:get("vymodule", name, "speed")
+      itf.type = _uci_real:get("vymodule", name, "type")
+      itf.enabled = _uci_real:get("vymodule", name, "enabled")
+    
+      table.insert(hw.interfaces, itf) 
+    end)
+  end
+ 
+  -- upgrade legacy that does not have interface sections
+  -- we create them here for status reports
+  -- for standard nmea0183 and seatalk the speed is read from iomode
+  
+  if #hw.interfaces == 0 then
+
+    if (hw.module.type == "nmea2000") or (hw.module.type == "vymodule") then
+
+      local it1 = {port = 0, speed = 250000, type = "nmea2000", enabled = 1 } 
+      table.insert(hw.interfaces, it1) 
+
+    elseif hw.module.type == "seatalk" or hw.module.type == "nmea0183" then
+	  
+      local it1 = {port = 1, speed = 4800, type = "nmea0183", enabled = 1 } 
+      local it2 = {port = 2, speed = 4800, type = "nmea0183", enabled = 1 } 
+
+      it1.speed = _uci_real:get("iomode", "serial0", "speed")
+
+      if hw.module.type == "seatalk" then
+        it2.type = "seatalk"
+        it2.speed = 4800
+      else
+        it2.speed = _uci_real:get("iomode", "serial1", "speed")
+      end  
+
+      table.insert(hw.interfaces, it1) 
+      table.insert(hw.interfaces, it2) 
+
+    end  
   end
   
   return hw
@@ -267,7 +327,21 @@ function writeHardwareOptions(hw)
   _uci_real:set("vyacht", "software", "version", versionToString(hw.software.version))
   _uci_real:set("vyacht", "module", "version", versionToString(hw.module.version))
   _uci_real:set("vyacht", "module", "type", hw.module.type)
+  _uci_real:set("vyacht", "module", "interface", hw.module.interface)
   _uci_real:set("vyacht", "network", "device", hw.network.devices)
+  
+  if file_exists("/etc/config/vymodule") then
+    for i = 1, #hw.interfaces do
+      local secname = "port" .. hw.interfaces[i].port
+      _uci_real:set("vymodule", secname, "interface")
+      _uci_real:set("vymodule", secname, "port", hw.interfaces[i].port)
+      _uci_real:set("vymodule", secname, "type", hw.interfaces[i].type)
+      _uci_real:set("vymodule", secname, "speed", hw.interfaces[i].speed)
+      _uci_real:set("vymodule", secname, "enabled", hw.interfaces[i].enabled)
+    end
+    _uci_real:commit("vymodule")
+  end
+
   _uci_real:commit("vyacht")
   
 end
@@ -417,7 +491,6 @@ function uploadFile(env)
   nstr = ""
   for i = 1, #checksum do
     local c = checksum:sub(i,i)
-    print(c)
     if ((c < '0') or (c > '9')) and ((c < 'a') or (c > 'f')) then
       nstr = nstr .. '.'
     else
@@ -462,7 +535,8 @@ function uploadFile(env)
   
   sys.exec(string.format("killall dropbear uhttpd; sleep 1; /sbin/sysupgrade %q", filename))
 
-  vWrite(string.format("{%q: %q}", "success", "Going into upgrade procedure and reboot of version "
+  vWrite(string.format("{%q: %q}", "success", "Now the critical part begins.\n Please remain patient.\n" 
+    .. "Going into upgrade procedure and reboot of version "
     .. versionToString(file.software.version) .. " now."))
 end
 
@@ -1192,7 +1266,7 @@ end
 
 function changeNMEA(params) 
 	local speed
-	local device
+	local port
 	local type = "nmea0183"
 	
 	for k, v in pairs(params) do
@@ -1201,9 +1275,9 @@ function changeNMEA(params)
 				speed = tonumber(v)
 			end
 		end
-		if k == "device" then
+		if k == "port" then
 			if isNumber(v) then
-				device = tonumber(v)
+				port = tonumber(v)
 			end
 		end
 		if k == "type" then
@@ -1214,70 +1288,99 @@ function changeNMEA(params)
 	vWrite("HTTP/1.0 200 OK\r\n")
         vWrite("Content-Type: application/json\r\n\r\n")
         
-        if (device == nil ) or ((device < 0) or (device > 1)) then
-        	vWrite(string.format("{\"internal error\": \"%d is an illegal device number\"}", device))
+        if (port == nil ) or (port < 0) then
+        	vWrite(string.format("{\"internal error\": \"Empty or negative port number received.\"}", port))
         	return
         end
-
+        
 	local hw = readHardwareOptions()
-	if hw.module.type == "seatalk" then
-		if device == 1 then
-        		vWrite(string.format("{%q: \"Seatalk module installed. This port cannot be changed.\"}", "error"))
-       			return
-		end
+	
+        if hw == nil then
+        	vWrite(string.format("{\"internal error\": \"Can't read hardware information.\"}", port))
+        	return
+        end
+        
+	local portno = -1
+        for i=1,#hw.interfaces do
+          if tonumber(hw.interfaces[i].port) == port then
+            portno = i
+            break
+          end
+        end 
+        
+        if portno < 0 then
+          vWrite(string.format("{\"internal error\": \"Unkown port number %d received.\"}", port))
+          return
+        end
+
+	if hw.interfaces[portno].type == "seatalk" then
+          vWrite(string.format("{%q: \"Seatalk module installed. This port cannot be changed.\"}", "error"))
+       	  return
 	end
-	if hw.module.type == "nmea0183" then
-		if type == "seatalk" then
-        		vWrite(string.format("{%q: \"NMEA0183 module installed. This port cannot be changed to Seatalk. Contact vyacht to ask for how to install Seatalk.\"}", "error"))
-       			return
-		end
+	
+	if hw.interfaces[portno].type == "nmea0183" then
+  	  if type == "seatalk" then
+            vWrite(string.format("{%q: \"NMEA0183 module installed. This port cannot be changed to Seatalk. Contact vyacht to ask for how to install Seatalk.\"}", "error"))
+       	    return
+	  end
 	end
+	
+	if hw.interfaces[portno].type == "nmea2000" then
+          vWrite(string.format("{%q: \"NMEA2000 cannot be changed. Please report that you have seen this message.\"}", "error"))
+       	  return
+	end
+	
 	if (speed ~= nil) then
 	
+	  if speed == tonumber(hw.interfaces[portno].speed) then
+            vWrite("{}")
+            return
+	  end
     
-    		if not hw then
-	        	vWrite(string.format("{%q: \"%d is an illegal device number\"}", "internal error"))
-        		return
-    		end
+     	  if hw.module.type == "nmea2000" or hw.module.type == "vymodule" then
+     	   
+            local secname = "port" .. port
+	    _uci_real:set("vymodule", secname, "speed", speed)
+	    _uci_real:commit("vymodule")
+     	    
+	    sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
+	    sys.call("env -i /etc/init.d/gpsd start >/dev/null")
+	
+       	    vWrite("{}")
+   	    return 
+    	  end
     		
-    		if hw.module.type == "nmea-iso" then
-    		end
-    		
-    		if hw.module.type == "seatalk" then
-    		end
-		
-		if seatalk then
-	        	vWrite(string.format("{%q: \"\"}", "error"))
-        		return
-		end
-		
-	        local dev = ""
-	        local name = ""
-	        if(device == 0) then 
-	          dev = "/dev/ttyS0"
-	          name= "serial0"
-	        else
-	          dev = "/dev/ttyS1"
-	          name= "serial1"
-	        end
-	        
-		_uci_real:set("iomode", name, "speed", speed)
-		_uci_real:commit("iomode")
-		
-                sys.call("env -i /etc/init.d/iomode start >/dev/null")
-        	vWrite("{}")
+	  local dev = ""
+	  local name = ""
+	  if(port == 1) then 
+	    dev = "/dev/ttyS0"
+	    name= "serial0"
+	  else
+	    dev = "/dev/ttyS1"
+	    name="serial1"
+	  end
+	  
+	  _uci_real:set("iomode", name, "speed", speed)
+	  _uci_real:commit("iomode")
+	  
+          sys.call("env -i /etc/init.d/iomode start >/dev/null")
+          vWrite("{}")
 	else
-        	vWrite(string.format("{\"error\": \"%s is not a valid baud rate!\"}", speed))
+	  vWrite(string.format("{\"error\": \"%s is not a valid baud rate!\"}", speed))
 	end
 end
 
 function changeGps(params) 
 	local port
+	local feed
 	for k, v in pairs(params) do
 		if k == "port" then
 			if isNumber(v) then
 				port = v
 			end
+		end
+		if k == "feed" then
+			feed = v
 		end
 	end
 
@@ -1285,15 +1388,49 @@ function changeGps(params)
         vWrite("Content-Type: application/json\r\n\r\n")
 
 	if port ~= nil then
+
 		_uci_real:set("gpsd", "core", "port", port)
 		_uci_real:commit("gpsd")
 		sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
 		sys.call("env -i /etc/init.d/gpsd start >/dev/null")
         	vWrite("{}")
-	else
-        	vWrite("{\"error\": \"Not a valid port number!\"}")
-	end
+		return
 
+	elseif feed ~= nil then
+
+          local m = feed:match("udp://(\*):(%d+)")
+          if not m and feed ~= "" then                               
+        	vWrite("{\"error\": \"Not a valid feed string! Only \'udp://*:<port no>\' currently supported.\"}")
+                return
+          end
+
+	  -- now get all devices for gpsd
+	  local t = _uci_real:get("gpsd", "core", "device")
+
+	  local newt = {}                                  
+	  local udp  = ""                                  
+
+	  for k = 1, #t do                                 
+	    if(t[k]:match("^udp://.*")) then               
+	      udp = t[k]                                   
+	    else                            
+	      newt[#newt+1] = t[k]          
+	    end                             
+	  end  
+
+	  if feed ~= "" then
+            newt[#newt+1] = feed
+          end
+	  _uci_real:set("gpsd", "core", "device", newt)
+	  _uci_real:commit("gpsd")                     
+
+          sys.call("env -i /etc/init.d/gpsd stop >/dev/null")
+	  sys.call("env -i /etc/init.d/gpsd start >/dev/null")
+          vWrite("{}")
+
+	else
+          vWrite("{\"error\": \"Not a valid port number or feed string!\"}")
+	end
 end
 
 function deviceInstalled(device)
@@ -1429,8 +1566,6 @@ function getStatus()
 	}
 	gps_data.Status = processStatus("/usr/sbin/gpsd")
 	
-	local NMEA_data;
-		
         -- 3 devices: wifi, wan, lan1 or wifi, lan1, lan2
         -- max 1 wan
         -- 2 devices: wifi, wan or wifi, lan2
@@ -1440,44 +1575,55 @@ function getStatus()
 	
 	getWifiKey(devices.wifi)
 
-	if hw.module.type == "nmea2000" then
-          NMEA_data = {{
-		DeviceName = "/dev/vyspi0.0",
-		Status = "TEST",
-		Speed  = 250000,
-		Type   = "nmea2000"
-	  }};
-	else
-          NMEA_data = {{
-		DeviceName = "/dev/ttyS0",
-		Status = "TEST",
-		Speed  = 4800,
-		Type   = "nmea0183"
-	  }, 
-	  { 
-		DeviceName = "/dev/ttyS1",
-		Status = "TEST",
-		Speed = "4800",
-		Type   = "nmea0183"
- 	  }}
+	if hw.module.type ~= "nmea2000" and hw.module.type ~= "vymodule" then
 	  -- NMEA speed
+
+	  hw.interfaces[1].actual = -1
+	  hw.interfaces[2].actual = -1
+
           local dev  = "/dev/ttyS0"
-          local speed  = sys.exec(string.format("stty -F %s speed", dev))
-          if speed then
+          local actual  = sys.exec(string.format("stty -F %s speed", dev))
+          if actual then
+            actual = actual:gsub("^%s*(.-)%s*$", "%1")
             -- remember 0 is 1, lua is weird
-            NMEA_data[1].Speed = speed:gsub("^%s*(.-)%s*$", "%1")
+            for i = 1, #hw.interfaces do
+              if tonumber(hw.interfaces[i].port) == 1 then
+              	hw.interfaces[i].actual = actual
+              end
+            end
           end
 
           dev  = "/dev/ttyS1"
-          speed  = sys.exec(string.format("stty -F %s speed", dev))
-          if speed then
-            NMEA_data[2].Speed = speed:gsub("^%s*(.-)%s*$", "%1")
-	    if hw.module.type == "seatalk" then
-              NMEA_data[2].Type = "seatalk"
-	    end          
+          actual  = sys.exec(string.format("stty -F %s speed", dev))
+          if actual then
+            actual = actual:gsub("^%s*(.-)%s*$", "%1")
+            for i = 1, #hw.interfaces do
+              if tonumber(hw.interfaces[i].port) == 2 then
+           	  hw.interfaces[i].actual = actual
+              end
+            end
           end
+        else
+            -- if there is any NMEA or Seatalk interfaces for nmea2000 or vymodule
+            -- then we currently set actual speed == stored speed
+            -- as we don't know actual speed
+            -- port ~= 0 is those interfaces which are not the actual nmea2000
+            for i = 1, #hw.interfaces do
+              if tonumber(hw.interfaces[i].port) ~= 0 then
+   	        hw.interfaces[i].actual = hw.interfaces[i].speed
+              end
+            end
 	end
-        
+
+	local t = _uci_real:get("gpsd", "core", "device")
+
+        local feed = ""        
+	for k = 1, #t do                                 
+	  if(t[k]:match("^udp://.*")) then               
+	    feed = t[k]                                   
+	  end                             
+	end  
+
         vWrite("HTTP/1.0 200 OK\r\n")
         vWrite("Content-Type: application/json\r\n\r\n")
 
@@ -1489,12 +1635,15 @@ function getStatus()
 
 	local data_to = {
 		Hostname      = sys.hostname(),
-		Firmware      = distversion,
+		OS            = distversion,
+		Firmware      = versionToString(hw.software.version),
 		Time          = os.date(),
 		Uptime        = sys.uptime(),
 		KernelVersion = kernel,
+		Module        = hw.module,
 		GpsStatus     = gps_data,
-		NMEAStatus    = NMEA_data,
+		NMEAStatus    = hw.interfaces,
+                GpsFeed       = feed,
 		NetDevices    = devices,
 	}	
        

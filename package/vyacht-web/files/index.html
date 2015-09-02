@@ -99,6 +99,31 @@ function changeGpsPort(value) {
         });
 }
 
+function changeGpsFeed(value) {
+
+        var params = "feed=" + value;
+
+	var spinner = showSpinningWheel('NMEA1Waiter');
+	setTimeout("timeout()", 10000);
+        $.ajax({
+                url: "/lua/changeGps",
+                type: "GET",
+                data: params,
+                dataType: "json",
+                success: function(res) {
+                	spinner.stop();
+			if(res.error) {
+				alert(res.error);
+			}
+                },
+                error: function(xhr, status, thrown) {
+                	spinner.stop();
+                        console.log(status);
+                        console.log(thrown);
+                }
+        });
+}
+
 function changeEthIP(device, value) {
         var lanwan = "";
         if(device == "eth01") {
@@ -141,19 +166,15 @@ function changeNMEASpeed(device, value) {
 	var speed = 4800;
 	var type = "";
 
-	var arr = value.split(",");
+	var arr = value.split(":");
 	if(arr.length < 1 || arr.length > 2) {
 		return;
 	}
 	
-	if(arr.length > 0) {
-		speed = parseInt(arr[0]);		
-	}
-	if(arr.length > 1) {
-		type  = arr[1];
-	}
+	type  = arr[0];
+	speed = parseInt(arr[1]);		
 
-        var params = "speed=" + speed + "&device=" + device + "&type=" + type;
+        var params = "speed=" + speed + "&port=" + device + "&type=" + type;
         console.log("sending: " + params);
 
 	var spinner = showSpinningWheel('NMEA1Waiter');
@@ -180,33 +201,52 @@ function changeNMEASpeed(device, value) {
 
 function updateStatus(res) {
 	document.getElementById('Hostname').innerHTML = res.Hostname;
-	document.getElementById('Firmware').innerHTML = res.Firmware;
-	<!-- document.getElementById('Time').innerHTML = res.Time; -->
+	document.getElementById('OS_version').innerHTML = res.OS;
+	document.getElementById('Firmware_version').innerHTML = res.Firmware;
+	document.getElementById('Time').innerHTML = res.Time; 
 	document.getElementById('Uptime').innerHTML = res.Uptime;
 
-	if(res.NMEAStatus[0].Type == "nmea2000") {	
+	if(res.Module.type == "nmea2000") {	
 	
  	  $( "#port_n2k" ).show();
-	  $( "#port_serial_1" ).hide();
-	  $( "#port_serial_2" ).hide();
 	  
 	  // $( "#NMEA2kStatus" ).innerHTML = res.NMEAStatus[0].DeviceName;
-	  document.getElementById('NMEA2kStatus').innerHTML = res.NMEAStatus[0].DeviceName;
+	  document.getElementById('NMEA2kStatus').innerHTML = "250k Baud";
+
+          if(res.NMEAStatus.length < 2) {
+            $( "#port_serial_1" ).hide();
+	    $( "#port_serial_2" ).hide();
+          }
 	  
 	} else {
-	
+
  	  $( "#port_n2k" ).hide();
-	  $( "#port_serial_1" ).show();
-	  $( "#port_serial_2" ).show();
-	
-	  document.getElementById('NMEA0Status').innerHTML = res.NMEAStatus[0].DeviceName;
-	  document.getElementById('NMEA0Speed').value = res.NMEAStatus[0].Speed;
-	  document.getElementById('NMEA1Status').innerHTML = res.NMEAStatus[1].DeviceName;
-	  document.getElementById('NMEA1Speed').value = res.NMEAStatus[1].Speed + "," + res.NMEAStatus[1].Type;
-	}
+
+        }
+	  
+	  for (var i = 0; i < res.NMEAStatus.length; i++) {
+	      var eln = "NMEA" + res.NMEAStatus[i].port + "Status"; 
+	      var eln1 = "#port_serial_" + res.NMEAStatus[i].port;
+	      var el = document.getElementById(eln);
+	      if(el != null) {
+	          el.innerHTML = res.NMEAStatus[i].actual;
+	      } else {
+	          console.log("Element " + eln + " not found!");
+	      }
+	      eln = "NMEA" + res.NMEAStatus[i].port + "Speed"; 
+	      el = document.getElementById(eln);
+	      if(el != null) {
+	          var val = res.NMEAStatus[i].type + ":" + res.NMEAStatus[i].speed;
+	          el.value = val;
+	          console.log("Element value " + val + "");
+	      } else {
+	          console.log("Element " + eln + " not found!");
+	      }
+	  }
 	
 	document.getElementById('GpsStatus').innerHTML = res.GpsStatus.Status;
 	document.getElementById('GpsPort').value = res.GpsStatus.Port;
+	document.getElementById('GpsFeed').value = res.GpsFeed;
 	
 	var ip = "0.0.0.0";
 	var pref = "0";
@@ -451,15 +491,17 @@ $(function() {
                     <td width="75%" colspan=2><div id='Hostname'>...</div></td>
                 </tr>
                 <tr>
-                    <th width="25%">Firmware</th>
-                    <td width="75%" colspan=2><div id='Firmware'>...</div></td>
+                    <th width="25%">OpenWrt version</th>
+                    <td width="75%" colspan=2><div id='OS_version'>...</div></td>
                 </tr>
-                <!--
+                <tr>
+                    <th width="25%">Firmware version</th>
+                    <td width="75%" colspan=2><div id='Firmware_version'>...</div></td>
+                </tr>
                 <tr>
                     <th width="25%">Time</th>
                     <td width="75%" colspan=2><div id='Time'>...</div></td>
                 </tr>
-                -->
                 <tr>
                     <th width="25%">Uptime</th>
                     <td width="75%" colspan=2><div id='Uptime'>...</div></td>
@@ -468,7 +510,7 @@ $(function() {
                 <thead><tr><th colspan="3">NMEA Network</th></tr></thead>
                 <tbody> 
                 <tr>
-                    <th width="25%">GPS port (network)</th>
+                    <th width="25%">NMEA TCP port</th>
                     <td width="50%">
 			<form name="input" action="" method="post">
 			<input id='GpsPort' type="text" name="gpsport" value="">
@@ -480,43 +522,43 @@ $(function() {
                     </td>
                 </tr>
                 <tr id='port_serial_1'>
-                    <th width="25%"> NMEA 0183 I</th>
-                    <td width="50%">
-			<form name="input" action="" method="post">
-			<select name="nmea0speed" id="NMEA0Speed">
-			<option value="2400">2400</option>
-			<option value="4800">4800 (NMEA 0183)</option>
-			<option value="9600">9600</option>
-			<option value="38400">38.4 (AIS, NMEA)</option>
-			<option value="115200">115.2k</option>
-			</select>
-			<input type="button" value="Change" 
-			       onClick="changeNMEASpeed(0, this.form.nmea0speed.value); return false;">
-			</form>
-		    </td>
-                    <td width="25%">
-			<div id='NMEA0Status'>...</div>
-                    </td>
-                </tr>
-                <tr id='port_serial_2'>
-                    <th width="25%">NMEA 0183 II</th>
+                    <th width="25%"> NMEA 0183</th>
                     <td width="50%">
 			<form name="input" action="" method="post">
 			<select name="nmea1speed" id="NMEA1Speed">
-			<option value="2400,nmea0183">2400</option>
-			<option value="4800,nmea0183">4800 (NMEA 0183)</option>
-			<option value="4800,seatalk">4800 (Seatalk)</option>
-			<option value="9600,nmea0183">9600</option>
-			<option value="38400,nmea0183">38.4k (AIS, NMEA)</option>
-			<option value="115200,nmea0183">115.2k</option>
+			<option value="nmea0183:2400">2400</option>
+			<option value="nmea0183:4800">4800 (NMEA 0183)</option>
+			<option value="nmea0183:9600">9600</option>
+			<option value="nmea0183:38400">38.4k (AIS, NMEA)</option>
+			<option value="nmea0183:115200">115.2k</option>
 			</select>
 			<input type="button" value="Change" 
 			       onClick="changeNMEASpeed(1, this.form.nmea1speed.value); return false;">
 			</form>
-			<div id='NMEA1Waiter'></div>
 		    </td>
                     <td width="25%">
 			<div id='NMEA1Status'>...</div>
+                    </td>
+                </tr>
+                <tr id='port_serial_2'>
+                    <th width="25%">Seatalk / NMEA 0183</th>
+                    <td width="50%">
+			<form name="input" action="" method="post">
+			<select name="nmea2speed" id="NMEA2Speed">
+			<option value="nmea0183:2400">2400</option>
+			<option value="nmea0183:4800">4800 (NMEA 0183)</option>
+			<option value="seatalk:4800">4800 (Seatalk)</option>
+			<option value="nmea0183:9600">9600</option>
+			<option value="nmea0183:38400">38.4k (AIS, NMEA)</option>
+			<option value="nmea0183:115200">115.2k</option>
+			</select>
+			<input type="button" value="Change" 
+			       onClick="changeNMEASpeed(2, this.form.nmea2speed.value); return false;">
+			</form>
+			<div id='NMEA1Waiter'></div>
+		    </td>
+                    <td width="25%">
+			<div id='NMEA2Status'>...</div>
 			
                     </td>
                 </tr>
@@ -526,6 +568,18 @@ $(function() {
 		    </td>
                     <td width="25%">
 			<div id='NMEA2kStatus'>...</div>
+                    </td>
+                </tr>
+                <tr>
+                    <th width="25%">Streamed data</th>
+                    <td width="50%">
+			<form name="input" action="" method="post">
+			<input id='GpsFeed' type="text" name="gpsfeed" value="">
+			<input type="button" value="Change" onClick="changeGpsFeed(this.form.gpsfeed.value)">
+			</form> 
+		    </td>
+                    <td width="25%">
+			<div id='GpsOtherPortStatus'>...</div>
                     </td>
                 </tr>
                 </body>
@@ -587,6 +641,10 @@ $(function() {
 			<div id='Eth2Status'>...</div>
                     </td>
                 </tr>
+                
+                </body>
+                <thead><tr><th colspan="3">Upgrade</th></tr></thead>
+                <tbody> 
                 
                 <tr>
 		    <div style="display: none;" id="upgrade-dialog" title="Upgrade">
